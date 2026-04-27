@@ -116,9 +116,9 @@ cards:
       - entity: sensor.skyrc_mc3000_screensaver
         name: Screensaver
       - type: divider
-      - entity: button.skyrc_mc3000_refresh_2
+      - entity: button.skyrc_mc3000_refresh
         name: Refresh
-      - entity: button.skyrc_mc3000_stop_all_2
+      - entity: button.skyrc_mc3000_stop_all
         name: Stop all
 
   - type: grid
@@ -139,10 +139,10 @@ cards:
           - sensor.slot_1_elapsed_time
           - sensor.slot_1_count
           - sensor.slot_1_led
-          - select.skyrc_mc3000_slot_1_expected_chemistry_2
+          - select.skyrc_mc3000_slot_1_expected_chemistry
           - type: divider
-          - button.skyrc_mc3000_slot_1_start_2
-          - button.skyrc_mc3000_slot_1_stop_2
+          - button.skyrc_mc3000_slot_1_start
+          - button.skyrc_mc3000_slot_1_stop
 
       - type: entities
         title: Slot 2
@@ -158,10 +158,10 @@ cards:
           - sensor.slot_2_elapsed_time
           - sensor.slot_2_count
           - sensor.slot_2_led
-          - select.skyrc_mc3000_slot_2_expected_chemistry_2
+          - select.skyrc_mc3000_slot_2_expected_chemistry
           - type: divider
-          - button.skyrc_mc3000_slot_2_start_2
-          - button.skyrc_mc3000_slot_2_stop_2
+          - button.skyrc_mc3000_slot_2_start
+          - button.skyrc_mc3000_slot_2_stop
 
       - type: entities
         title: Slot 3
@@ -177,10 +177,10 @@ cards:
           - sensor.slot_3_elapsed_time
           - sensor.slot_3_count
           - sensor.slot_3_led
-          - select.skyrc_mc3000_slot_3_expected_chemistry_2
+          - select.skyrc_mc3000_slot_3_expected_chemistry
           - type: divider
-          - button.skyrc_mc3000_slot_3_start_2
-          - button.skyrc_mc3000_slot_3_stop_2
+          - button.skyrc_mc3000_slot_3_start
+          - button.skyrc_mc3000_slot_3_stop
 
       - type: entities
         title: Slot 4
@@ -196,7 +196,7 @@ cards:
           - sensor.slot_4_elapsed_time
           - sensor.slot_4_count
           - sensor.slot_4_led
-          - select.skyrc_mc3000_slot_4_expected_chemistry_2
+          - select.skyrc_mc3000_slot_4_expected_chemistry
           - type: divider
-          - button.skyrc_mc3000_slot_4_start_2
-          - button.skyrc_mc3000_slot_4_stop_2
+          - button.skyrc_mc3000_slot_4_start
+          - button.skyrc_mc3000_slot_4_stop
