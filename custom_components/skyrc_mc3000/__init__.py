@@ -2,8 +2,6 @@ from __future__ import annotations
 
 import logging
 
-import voluptuous as vol
-
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, ServiceCall
@@ -22,12 +20,6 @@ SERVICE_STOP_SLOT = "stop_slot"
 SERVICE_STOP_ALL = "stop_all"
 
 ATTR_SLOT = "slot"
-
-SLOT_SCHEMA = vol.Schema(
-    {
-        vol.Required(ATTR_SLOT): vol.All(vol.Coerce(int), vol.Range(min=1, max=4)),
-    }
-)
 
 
 def _normalize_chemistry(value) -> str | None:
@@ -72,6 +64,16 @@ async def _get_connected_charger(hass: HomeAssistant):
         await charger.connect()
 
     return charger, coordinator
+
+
+def _slot_schema():
+    import voluptuous as vol
+
+    return vol.Schema(
+        {
+            vol.Required(ATTR_SLOT): vol.All(vol.Coerce(int), vol.Range(min=1, max=4)),
+        }
+    )
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -144,7 +146,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             DOMAIN,
             SERVICE_START_SLOT,
             async_handle_start_slot,
-            schema=SLOT_SCHEMA,
+            schema=_slot_schema(),
         )
 
     if not hass.services.has_service(DOMAIN, SERVICE_STOP_SLOT):
@@ -152,7 +154,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             DOMAIN,
             SERVICE_STOP_SLOT,
             async_handle_stop_slot,
-            schema=SLOT_SCHEMA,
+            schema=_slot_schema(),
         )
 
     if not hass.services.has_service(DOMAIN, SERVICE_STOP_ALL):
