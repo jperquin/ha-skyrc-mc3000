@@ -1,30 +1,19 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Awaitable, Callable
-
 from homeassistant.components.button import ButtonEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 
 
-@dataclass(frozen=True)
-class SkyrcButtonDescription:
-    key: str
-    name: str
-    icon: str
-    press_fn: Callable
-
-
 async def async_setup_entry(hass, entry, async_add_entities):
     """Set up SkyRC MC3000 buttons."""
     coordinator = hass.data[DOMAIN]["coordinator"]
 
-    entities: list[ButtonEntity] = []
-
-    entities.append(SkyrcMc3000RefreshButton(coordinator))
-    entities.append(SkyrcMc3000StopAllButton(coordinator))
+    entities: list[ButtonEntity] = [
+        SkyrcMc3000RefreshButton(coordinator),
+        SkyrcMc3000StopAllButton(coordinator),
+    ]
 
     for slot_index in range(4):
         entities.append(SkyrcMc3000StartSlotButton(coordinator, slot_index))
@@ -38,9 +27,6 @@ class SkyrcMc3000BaseButton(CoordinatorEntity, ButtonEntity):
 
     _attr_has_entity_name = False
 
-    def __init__(self, coordinator) -> None:
-        super().__init__(coordinator)
-
     @property
     def device_info(self):
         """Return device info."""
@@ -48,7 +34,7 @@ class SkyrcMc3000BaseButton(CoordinatorEntity, ButtonEntity):
         if self.coordinator.data:
             charger = self.coordinator.data.get("charger", {}) or {}
 
-        address = charger.get("address") or getattr(self.coordinator, "address", "mc3000")
+        address = getattr(self.coordinator, "address", "mc3000")
 
         return {
             "identifiers": {(DOMAIN, address)},
@@ -64,9 +50,12 @@ class SkyrcMc3000RefreshButton(SkyrcMc3000BaseButton):
     """Refresh data button."""
 
     _attr_name = "SkyRC MC3000 Refresh"
-    _attr_unique_id = "skyrc_mc3000_refresh"
-    _attr_suggested_object_id = "skyrc_mc3000_refresh"
     _attr_icon = "mdi:refresh"
+
+    def __init__(self, coordinator) -> None:
+        super().__init__(coordinator)
+        self._attr_unique_id = f"skyrc_mc3000_{coordinator.address}_refresh"
+        self._attr_suggested_object_id = "skyrc_mc3000_refresh"
 
     async def async_press(self) -> None:
         """Refresh charger data."""
@@ -77,9 +66,12 @@ class SkyrcMc3000StopAllButton(SkyrcMc3000BaseButton):
     """Stop all slots button."""
 
     _attr_name = "SkyRC MC3000 Stop All"
-    _attr_unique_id = "skyrc_mc3000_stop_all"
-    _attr_suggested_object_id = "skyrc_mc3000_stop_all"
     _attr_icon = "mdi:stop-circle-outline"
+
+    def __init__(self, coordinator) -> None:
+        super().__init__(coordinator)
+        self._attr_unique_id = f"skyrc_mc3000_{coordinator.address}_stop_all"
+        self._attr_suggested_object_id = "skyrc_mc3000_stop_all"
 
     async def async_press(self) -> None:
         """Stop all slots."""
@@ -104,7 +96,9 @@ class SkyrcMc3000StartSlotButton(SkyrcMc3000BaseButton):
         self.slot_index = slot_index
         self.slot = slot_index + 1
         self._attr_name = f"SkyRC MC3000 Slot {self.slot} Start"
-        self._attr_unique_id = f"skyrc_mc3000_slot_{self.slot}_start"
+        self._attr_unique_id = (
+            f"skyrc_mc3000_{coordinator.address}_slot_{self.slot}_start"
+        )
         self._attr_suggested_object_id = f"skyrc_mc3000_slot_{self.slot}_start"
 
     async def async_press(self) -> None:
@@ -128,7 +122,9 @@ class SkyrcMc3000StopSlotButton(SkyrcMc3000BaseButton):
         self.slot_index = slot_index
         self.slot = slot_index + 1
         self._attr_name = f"SkyRC MC3000 Slot {self.slot} Stop"
-        self._attr_unique_id = f"skyrc_mc3000_slot_{self.slot}_stop"
+        self._attr_unique_id = (
+            f"skyrc_mc3000_{coordinator.address}_slot_{self.slot}_stop"
+        )
         self._attr_suggested_object_id = f"skyrc_mc3000_slot_{self.slot}_stop"
 
     async def async_press(self) -> None:
