@@ -11,7 +11,7 @@ from .const import CONF_ADDRESS, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
-PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.SELECT]
+PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.SELECT, Platform.BUTTON]
 
 SERVICE_REFRESH = "refresh"
 SERVICE_START_SLOT = "start_slot"

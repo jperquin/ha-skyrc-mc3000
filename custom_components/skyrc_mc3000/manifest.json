@@ -12,7 +12,7 @@
   "requirements": [
     "skyrc-ble==2.1.0"
   ],
-  "version": "0.9.2",
+  "version": "0.9.3",
   "dependencies": [
     "bluetooth_adapters"
   ]

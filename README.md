@@ -15,6 +15,7 @@ Tested features:
 - Stop all slots
 - Expected chemistry dropdown per slot
 - Chemistry interlock before starting a slot
+- Button entities for start, stop, stop all, and refresh
 
 ## Entities
 
@@ -33,7 +34,11 @@ Per slot:
 - Temperature
 - Internal resistance
 - Elapsed time
+- Count
+- LED
 - Expected chemistry
+- Start button
+- Stop button
 
 ## Services
 
