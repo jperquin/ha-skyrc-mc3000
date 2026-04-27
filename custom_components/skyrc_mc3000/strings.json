@@ -1,0 +1,20 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "SkyRC MC3000",
+        "description": "Select your SkyRC MC3000 charger. If no charger is found, enter the BLE address manually.",
+        "data": {
+          "address": "BLE address",
+          "name": "Name"
+        }
+      }
+    },
+    "error": {
+      "no_devices_found": "No SkyRC MC3000 charger found. Make sure the charger is powered on and not connected to the SkyRC mobile app."
+    },
+    "abort": {
+      "already_configured": "This SkyRC MC3000 charger is already configured."
+    }
+  }
+}

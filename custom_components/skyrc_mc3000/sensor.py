@@ -133,7 +133,7 @@ DEVICE_SENSORS: tuple[SkyrcSensorDescription, ...] = (
 )
 
 
-async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
+async def async_setup_entry(hass, entry, async_add_entities):
     """Set up SkyRC MC3000 sensors."""
     coordinator = hass.data[DOMAIN]["coordinator"]
 
@@ -146,7 +146,7 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
         for description in CHANNEL_SENSORS:
             entities.append(SkyrcMc3000ChannelSensor(coordinator, slot_index, description))
 
-    async_add_entities(entities)
+    async_add_entities(entities, update_before_add=False)
 
 
 class SkyrcMc3000BaseSensor(CoordinatorEntity, SensorEntity):

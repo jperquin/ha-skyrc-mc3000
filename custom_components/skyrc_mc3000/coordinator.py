@@ -10,7 +10,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 
 from skyrc_ble import MC3000_BLUETOOTH_NAMES, Mc3000
 
-from .const import CHARGER_ADDRESS, DOMAIN
+from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -21,20 +21,21 @@ UPDATE_INTERVAL = timedelta(seconds=60)
 class SkyrcMc3000Coordinator(DataUpdateCoordinator):
     """Coordinator for SkyRC MC3000 polling."""
 
-    def __init__(self, hass: HomeAssistant) -> None:
+    def __init__(self, hass: HomeAssistant, address: str) -> None:
         super().__init__(
             hass,
             _LOGGER,
             name=DOMAIN,
             update_interval=UPDATE_INTERVAL,
         )
+        self.address = address
         self.charger: Mc3000 | None = None
         self._last_device = None
         self._last_good_data = None
 
     async def _find_device(self):
         """Find charger BLEDevice by configured address or known MC3000 name."""
-        _LOGGER.info("SkyRC MC3000: scanning for BLE device %s", CHARGER_ADDRESS)
+        _LOGGER.info("SkyRC MC3000: scanning for BLE device %s", self.address)
 
         devices = await BleakScanner.discover(timeout=SCAN_TIMEOUT)
 
@@ -45,7 +46,7 @@ class SkyrcMc3000Coordinator(DataUpdateCoordinator):
             name = device.name or ""
             address = device.address or ""
 
-            if address.upper() == CHARGER_ADDRESS.upper():
+            if address.upper() == self.address.upper():
                 _LOGGER.info(
                     "SkyRC MC3000: found target by address: name=%s address=%s",
                     name,
@@ -59,7 +60,7 @@ class SkyrcMc3000Coordinator(DataUpdateCoordinator):
 
         if fallback is not None:
             _LOGGER.warning(
-                "SkyRC MC3000: using fallback MC3000-like BLE device: %s; candidates=%s",
+                "SkyRC MC3000: target address not found, using fallback MC3000-like BLE device: %s; candidates=%s",
                 fallback.address,
                 candidates,
             )
@@ -82,7 +83,7 @@ class SkyrcMc3000Coordinator(DataUpdateCoordinator):
             device = await self._find_device()
 
         if device is None:
-            raise UpdateFailed(f"SkyRC MC3000 not found at {CHARGER_ADDRESS}")
+            raise UpdateFailed(f"SkyRC MC3000 not found at {self.address}")
 
         self._last_device = device
         self.charger = Mc3000(device)

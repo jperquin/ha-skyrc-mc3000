@@ -4,17 +4,17 @@ import logging
 
 import voluptuous as vol
 
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import discovery
-from homeassistant.helpers.typing import ConfigType
 
-from .const import DOMAIN
+from .const import CONF_ADDRESS, DOMAIN
 from .coordinator import SkyrcMc3000Coordinator
 
 _LOGGER = logging.getLogger(__name__)
 
-PLATFORMS: list[str] = ["sensor", "select"]
+PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.SELECT]
 
 SERVICE_REFRESH = "refresh"
 SERVICE_START_SLOT = "start_slot"
@@ -31,19 +31,15 @@ SLOT_SCHEMA = vol.Schema(
 
 
 def _normalize_chemistry(value) -> str | None:
-    """Normalize chemistry enum/string value."""
     if value is None:
         return None
-
     name = getattr(value, "name", None)
     if name is not None:
         return str(name).lower()
-
     return str(value).lower()
 
 
 def _get_expected_chemistry(hass: HomeAssistant, slot: int) -> str:
-    """Read expected chemistry select state for a slot."""
     entity_id = f"select.skyrc_mc3000_slot_{slot}_expected_chemistry"
     state = hass.states.get(entity_id)
 
@@ -58,7 +54,6 @@ def _get_expected_chemistry(hass: HomeAssistant, slot: int) -> str:
 
 
 def _get_actual_chemistry(coordinator: SkyrcMc3000Coordinator, channel: int) -> str | None:
-    """Read actual chemistry from latest coordinator data."""
     if not coordinator.data:
         return None
 
@@ -70,7 +65,6 @@ def _get_actual_chemistry(coordinator: SkyrcMc3000Coordinator, channel: int) -> 
 
 
 async def _get_connected_charger(hass: HomeAssistant):
-    """Return connected charger from coordinator."""
     coordinator: SkyrcMc3000Coordinator = hass.data[DOMAIN]["coordinator"]
     charger = await coordinator._ensure_charger()
 
@@ -80,28 +74,20 @@ async def _get_connected_charger(hass: HomeAssistant):
     return charger, coordinator
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
-    """Set up the SkyRC MC3000 integration from YAML."""
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Set up SkyRC MC3000 from a config entry."""
     hass.data.setdefault(DOMAIN, {})
 
-    coordinator = SkyrcMc3000Coordinator(hass)
+    address = entry.data[CONF_ADDRESS]
+    coordinator = SkyrcMc3000Coordinator(hass, address)
     hass.data[DOMAIN]["coordinator"] = coordinator
 
-    for platform in PLATFORMS:
-        await discovery.async_load_platform(
-            hass,
-            platform,
-            DOMAIN,
-            {},
-            config,
-        )
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     async def async_handle_refresh(call: ServiceCall) -> None:
-        """Force refresh from charger."""
         await coordinator.async_request_refresh()
 
     async def async_handle_start_slot(call: ServiceCall) -> None:
-        """Start one slot using the program configured on the MC3000."""
         slot = call.data[ATTR_SLOT]
         channel = slot - 1
 
@@ -130,7 +116,6 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         await coordinator.async_request_refresh()
 
     async def async_handle_stop_slot(call: ServiceCall) -> None:
-        """Stop one slot."""
         slot = call.data[ATTR_SLOT]
         channel = slot - 1
 
@@ -142,7 +127,6 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         await coordinator.async_request_refresh()
 
     async def async_handle_stop_all(call: ServiceCall) -> None:
-        """Stop all slots."""
         charger, coordinator = await _get_connected_charger(hass)
 
         _LOGGER.info("SkyRC MC3000: stopping all slots")
@@ -152,33 +136,37 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
         await coordinator.async_request_refresh()
 
-    hass.services.async_register(
-        DOMAIN,
-        SERVICE_REFRESH,
-        async_handle_refresh,
-    )
+    if not hass.services.has_service(DOMAIN, SERVICE_REFRESH):
+        hass.services.async_register(DOMAIN, SERVICE_REFRESH, async_handle_refresh)
 
-    hass.services.async_register(
-        DOMAIN,
-        SERVICE_START_SLOT,
-        async_handle_start_slot,
-        schema=SLOT_SCHEMA,
-    )
+    if not hass.services.has_service(DOMAIN, SERVICE_START_SLOT):
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_START_SLOT,
+            async_handle_start_slot,
+            schema=SLOT_SCHEMA,
+        )
 
-    hass.services.async_register(
-        DOMAIN,
-        SERVICE_STOP_SLOT,
-        async_handle_stop_slot,
-        schema=SLOT_SCHEMA,
-    )
+    if not hass.services.has_service(DOMAIN, SERVICE_STOP_SLOT):
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_STOP_SLOT,
+            async_handle_stop_slot,
+            schema=SLOT_SCHEMA,
+        )
 
-    hass.services.async_register(
-        DOMAIN,
-        SERVICE_STOP_ALL,
-        async_handle_stop_all,
-    )
+    if not hass.services.has_service(DOMAIN, SERVICE_STOP_ALL):
+        hass.services.async_register(DOMAIN, SERVICE_STOP_ALL, async_handle_stop_all)
 
-    # Do not block Home Assistant startup with BLE scan/connect.
     hass.async_create_task(coordinator.async_refresh())
 
     return True
+
+
+async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+
+    if unload_ok:
+        hass.data.get(DOMAIN, {}).pop("coordinator", None)
+
+    return unload_ok

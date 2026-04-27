@@ -71,13 +71,11 @@ Example:
 
 ## Configuration
 
-Current development version uses YAML and a hardcoded BLE address in const.py.
+Configuration is done through the Home Assistant UI.
 
-Example configuration.yaml entry:
+Go to Settings -> Devices & services -> Add integration -> SkyRC MC3000.
 
-    skyrc_mc3000:
-
-Config flow is planned.
+The setup flow scans for BLE devices named Charger, SimpleBLEPeripheral, or HitecCharger. If the charger is not discovered, enter the BLE address manually.
 
 ## Safety model
 
