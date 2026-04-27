@@ -209,21 +209,34 @@ class SkyrcMc3000BaseSensor(CoordinatorEntity, SensorEntity):
 
     @property
     def device_info(self):
+        """Return device info for the SkyRC MC3000."""
         charger = self.coordinator.data.get("charger", {}) if self.coordinator.data else {}
 
+        address = (
+            getattr(self.coordinator, "address", None)
+            or charger.get("address")
+            or "mc3000"
+        )
+
+        manufacturer = charger.get("manufacturer") or "SkyRC"
+        model = charger.get("model") or "MC3000"
         sw_version = charger.get("sw_version")
         hw_version = charger.get("hw_version")
-        suggested_version = None
-        if sw_version or hw_version:
-            suggested_version = f"SW {sw_version or '?'} / HW {hw_version or '?'}"
 
-        return {
-            "identifiers": {(DOMAIN, charger.get("address", "mc3000"))},
+        device_info = {
+            "identifiers": {(DOMAIN, address)},
             "name": "SkyRC MC3000",
-            "manufacturer": charger.get("manufacturer", "SkyRC"),
-            "model": charger.get("model", "MC3000"),
-            "sw_version": suggested_version,
+            "manufacturer": manufacturer,
+            "model": model,
         }
+
+        if sw_version:
+            device_info["sw_version"] = str(sw_version)
+
+        if hw_version:
+            device_info["hw_version"] = str(hw_version)
+
+        return device_info
 
 
 class SkyrcMc3000DeviceSensor(SkyrcMc3000BaseSensor):
