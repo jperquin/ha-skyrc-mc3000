@@ -8,7 +8,6 @@ from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import HomeAssistantError
 
 from .const import CONF_ADDRESS, DOMAIN
-from .coordinator import SkyrcMc3000Coordinator
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -45,7 +44,7 @@ def _get_expected_chemistry(hass: HomeAssistant, slot: int) -> str:
     return value
 
 
-def _get_actual_chemistry(coordinator: SkyrcMc3000Coordinator, channel: int) -> str | None:
+def _get_actual_chemistry(coordinator, channel: int) -> str | None:
     if not coordinator.data:
         return None
 
@@ -57,7 +56,7 @@ def _get_actual_chemistry(coordinator: SkyrcMc3000Coordinator, channel: int) -> 
 
 
 async def _get_connected_charger(hass: HomeAssistant):
-    coordinator: SkyrcMc3000Coordinator = hass.data[DOMAIN]["coordinator"]
+    coordinator = hass.data[DOMAIN]["coordinator"]
     charger = await coordinator._ensure_charger()
 
     if not charger.is_connected:
@@ -78,6 +77,8 @@ def _slot_schema():
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up SkyRC MC3000 from a config entry."""
+    from .coordinator import SkyrcMc3000Coordinator
+
     hass.data.setdefault(DOMAIN, {})
 
     address = entry.data[CONF_ADDRESS]

@@ -4,12 +4,9 @@ import logging
 from typing import Any
 
 import voluptuous as vol
-from bleak import BleakScanner
 
 from homeassistant import config_entries
 from homeassistant.data_entry_flow import FlowResult
-
-from skyrc_ble import MC3000_BLUETOOTH_NAMES
 
 from .const import CONF_ADDRESS, CONF_NAME, DEFAULT_NAME, DOMAIN
 
@@ -55,13 +52,30 @@ class SkyrcMc3000ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         )
 
     async def _async_discover_devices(self) -> dict[str, str]:
-        """Discover candidate MC3000 BLE devices."""
+        """Discover candidate MC3000 BLE devices.
+
+        Discovery is best-effort. If imports or scanning fail, the flow still
+        falls back to manual BLE address entry.
+        """
         devices: dict[str, str] = {}
+
+        try:
+            from bleak import BleakScanner
+            from skyrc_ble import MC3000_BLUETOOTH_NAMES
+        except Exception as err:
+            _LOGGER.warning(
+                "SkyRC MC3000 BLE discovery imports unavailable, using manual setup: %r",
+                err,
+            )
+            return devices
 
         try:
             discovered = await BleakScanner.discover(timeout=15.0)
         except Exception as err:
-            _LOGGER.exception("SkyRC MC3000 BLE discovery failed: %r", err)
+            _LOGGER.warning(
+                "SkyRC MC3000 BLE discovery failed, using manual setup: %r",
+                err,
+            )
             return devices
 
         for device in discovered:
