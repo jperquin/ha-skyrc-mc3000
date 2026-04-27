@@ -91,3 +91,112 @@ Check chemistry, cell count, current, voltage limits, and battery condition on t
 ## Installation through HACS custom repository
 
 Add this repository as a custom repository in HACS with type Integration, then install and restart Home Assistant.
+
+## Example Lovelace dashboard card
+
+The example below uses standard Home Assistant cards only. Entity IDs may differ slightly on existing installations if Home Assistant has already assigned entity names before installing newer versions of the integration.
+
+```yaml
+type: vertical-stack
+cards:
+  - type: entities
+    title: SkyRC MC3000
+    show_header_toggle: false
+    entities:
+      - entity: sensor.input_voltage
+        name: Input voltage
+      - entity: sensor.skyrc_mc3000_cooling_fan_mode
+        name: Cooling fan
+      - entity: sensor.skyrc_mc3000_display_mode
+        name: Display
+      - entity: sensor.skyrc_mc3000_temperature_unit
+        name: Temperature unit
+      - entity: sensor.skyrc_mc3000_system_beep
+        name: System beep
+      - entity: sensor.skyrc_mc3000_screensaver
+        name: Screensaver
+      - type: divider
+      - entity: button.skyrc_mc3000_refresh_2
+        name: Refresh
+      - entity: button.skyrc_mc3000_stop_all_2
+        name: Stop all
+
+  - type: grid
+    columns: 2
+    square: false
+    cards:
+      - type: entities
+        title: Slot 1
+        entities:
+          - sensor.slot_1_status
+          - sensor.slot_1_battery_type
+          - sensor.slot_1_mode
+          - sensor.slot_1_voltage
+          - sensor.slot_1_current
+          - sensor.slot_1_capacity
+          - sensor.slot_1_temperature
+          - sensor.slot_1_internal_resistance
+          - sensor.slot_1_elapsed_time
+          - sensor.slot_1_count
+          - sensor.slot_1_led
+          - select.skyrc_mc3000_slot_1_expected_chemistry_2
+          - type: divider
+          - button.skyrc_mc3000_slot_1_start_2
+          - button.skyrc_mc3000_slot_1_stop_2
+
+      - type: entities
+        title: Slot 2
+        entities:
+          - sensor.slot_2_status
+          - sensor.slot_2_battery_type
+          - sensor.slot_2_mode
+          - sensor.slot_2_voltage
+          - sensor.slot_2_current
+          - sensor.slot_2_capacity
+          - sensor.slot_2_temperature
+          - sensor.slot_2_internal_resistance
+          - sensor.slot_2_elapsed_time
+          - sensor.slot_2_count
+          - sensor.slot_2_led
+          - select.skyrc_mc3000_slot_2_expected_chemistry_2
+          - type: divider
+          - button.skyrc_mc3000_slot_2_start_2
+          - button.skyrc_mc3000_slot_2_stop_2
+
+      - type: entities
+        title: Slot 3
+        entities:
+          - sensor.slot_3_status
+          - sensor.slot_3_battery_type
+          - sensor.slot_3_mode
+          - sensor.slot_3_voltage
+          - sensor.slot_3_current
+          - sensor.slot_3_capacity
+          - sensor.slot_3_temperature
+          - sensor.slot_3_internal_resistance
+          - sensor.slot_3_elapsed_time
+          - sensor.slot_3_count
+          - sensor.slot_3_led
+          - select.skyrc_mc3000_slot_3_expected_chemistry_2
+          - type: divider
+          - button.skyrc_mc3000_slot_3_start_2
+          - button.skyrc_mc3000_slot_3_stop_2
+
+      - type: entities
+        title: Slot 4
+        entities:
+          - sensor.slot_4_status
+          - sensor.slot_4_battery_type
+          - sensor.slot_4_mode
+          - sensor.slot_4_voltage
+          - sensor.slot_4_current
+          - sensor.slot_4_capacity
+          - sensor.slot_4_temperature
+          - sensor.slot_4_internal_resistance
+          - sensor.slot_4_elapsed_time
+          - sensor.slot_4_count
+          - sensor.slot_4_led
+          - select.skyrc_mc3000_slot_4_expected_chemistry_2
+          - type: divider
+          - button.skyrc_mc3000_slot_4_start_2
+          - button.skyrc_mc3000_slot_4_stop_2
