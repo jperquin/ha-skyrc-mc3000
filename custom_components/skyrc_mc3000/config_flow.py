@@ -6,6 +6,7 @@ from typing import Any
 import voluptuous as vol
 
 from homeassistant import config_entries
+from homeassistant.components import bluetooth
 from homeassistant.data_entry_flow import FlowResult
 
 from .const import CONF_ADDRESS, CONF_NAME, DEFAULT_NAME, DOMAIN
@@ -13,7 +14,7 @@ from .const import CONF_ADDRESS, CONF_NAME, DEFAULT_NAME, DOMAIN
 _LOGGER = logging.getLogger(__name__)
 
 
-class SkyrcMc3000ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
+class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for SkyRC MC3000."""
 
     VERSION = 1
@@ -40,7 +41,7 @@ class SkyrcMc3000ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 },
             )
 
-        devices = await self._async_discover_devices()
+        devices = self._async_discover_devices()
 
         if not devices:
             errors["base"] = "no_devices_found"
@@ -51,42 +52,31 @@ class SkyrcMc3000ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             errors=errors,
         )
 
-    async def _async_discover_devices(self) -> dict[str, str]:
-        """Discover candidate MC3000 BLE devices.
-
-        Discovery is best-effort. If imports or scanning fail, the flow still
-        falls back to manual BLE address entry.
-        """
+    def _async_discover_devices(self) -> dict[str, str]:
+        """Discover MC3000 devices through Home Assistant Bluetooth manager."""
         devices: dict[str, str] = {}
 
         try:
-            from bleak import BleakScanner
-            from skyrc_ble import MC3000_BLUETOOTH_NAMES
+            infos = bluetooth.async_discovered_service_info(self.hass)
         except Exception as err:
-            _LOGGER.warning(
-                "SkyRC MC3000 BLE discovery imports unavailable, using manual setup: %r",
-                err,
-            )
+            _LOGGER.warning("SkyRC MC3000 HA Bluetooth discovery failed: %r", err)
             return devices
 
-        try:
-            discovered = await BleakScanner.discover(timeout=15.0)
-        except Exception as err:
-            _LOGGER.warning(
-                "SkyRC MC3000 BLE discovery failed, using manual setup: %r",
-                err,
-            )
-            return devices
-
-        for device in discovered:
-            name = device.name or ""
-            address = device.address or ""
+        for info in infos:
+            name = info.name or ""
+            address = info.address or ""
+            service_uuids = [uuid.lower() for uuid in (info.service_uuids or [])]
 
             if not address:
                 continue
 
-            if name in MC3000_BLUETOOTH_NAMES:
-                devices[address] = f"{name} ({address})"
+            if (
+                name in {"SimpleBLEPeripheral", "Charger", "HitecCharger"}
+                or "0000ffe0-0000-1000-8000-00805f9b34fb" in service_uuids
+            ):
+                source = getattr(info, "source", None)
+                rssi = getattr(info, "rssi", None)
+                devices[address] = f"{name or 'SkyRC MC3000'} ({address}) via {source}, RSSI {rssi}"
 
         return devices
 
@@ -102,7 +92,7 @@ class SkyrcMc3000ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         return vol.Schema(
             {
-                vol.Required(CONF_ADDRESS): str,
+                vol.Required(CONF_ADDRESS, default="34:14:B5:3F:92:3D"): str,
                 vol.Optional(CONF_NAME, default=DEFAULT_NAME): str,
             }
         )

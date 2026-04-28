@@ -1,0 +1,378 @@
+title: SkyRC Test
+views:
+  - title: MC3000
+    path: mc3000
+    icon: mdi:battery-charging
+    cards:
+      - type: vertical-stack
+        cards:
+          - type: entities
+            title: SkyRC MC3000
+            show_header_toggle: false
+            entities:
+              - entity: switch.skyrc_mc3000_companion_app_mode
+                name: Companion App Mode
+              - entity: switch.skyrc_mc3000_auto_fetch_voltage_curves
+                name: Auto Fetch Voltage Curves
+              - type: divider
+
+              - entity: sensor.skyrc_mc3000_input_voltage
+                name: Input voltage
+              - entity: sensor.skyrc_mc3000_cooling_fan_mode
+                name: Cooling fan
+              - entity: sensor.skyrc_mc3000_display_mode
+                name: Display
+              - entity: sensor.skyrc_mc3000_temperature_unit
+                name: Temperature unit
+              - entity: sensor.skyrc_mc3000_system_beep
+                name: System beep
+              - entity: sensor.skyrc_mc3000_screensaver
+                name: Screensaver
+
+              - type: divider
+
+              - entity: button.skyrc_mc3000_refresh
+                name: Refresh
+              - entity: button.skyrc_mc3000_stop_all
+                name: Stop all
+
+          - type: grid
+            columns: 2
+            square: false
+            cards:
+              - type: entities
+                title: Slot 1
+                show_header_toggle: false
+                entities:
+                  - entity: sensor.skyrc_mc3000_slot_1_status
+                    name: Status
+                  - entity: sensor.skyrc_mc3000_slot_1_battery_type
+                    name: Battery
+                  - entity: sensor.skyrc_mc3000_slot_1_mode
+                    name: Mode
+                  - entity: sensor.skyrc_mc3000_slot_1_voltage
+                    name: Voltage
+                  - entity: sensor.skyrc_mc3000_slot_1_current
+                    name: Current
+                  - entity: sensor.skyrc_mc3000_slot_1_capacity
+                    name: Capacity
+                  - entity: sensor.skyrc_mc3000_slot_1_temperature
+                    name: Temperature
+                  - entity: sensor.skyrc_mc3000_slot_1_internal_resistance
+                    name: Resistance
+                  - entity: sensor.skyrc_mc3000_slot_1_elapsed_time
+                    name: Elapsed time
+                  - entity: select.skyrc_mc3000_slot_1_expected_chemistry
+                    name: Expected chemistry
+
+                  - type: divider
+
+                  - entity: button.skyrc_mc3000_slot_1_start
+                    name: Start
+                  - entity: button.skyrc_mc3000_slot_1_stop
+                    name: Stop
+                  - entity: button.skyrc_mc3000_slot_1_fetch_voltage_curve
+                    name: Fetch curve
+
+                  - type: divider
+
+                  - entity: sensor.skyrc_mc3000_slot_1_voltage_curve_points
+                    name: Curve points
+                  - type: attribute
+                    entity: sensor.skyrc_mc3000_slot_1_voltage_curve_points
+                    attribute: interval_seconds
+                    name: Curve interval
+                  - type: attribute
+                    entity: sensor.skyrc_mc3000_slot_1_voltage_curve_points
+                    attribute: min_nonzero_mv
+                    name: Curve min mV
+                  - type: attribute
+                    entity: sensor.skyrc_mc3000_slot_1_voltage_curve_points
+                    attribute: max_nonzero_mv
+                    name: Curve max mV
+                  - type: attribute
+                    entity: sensor.skyrc_mc3000_slot_1_voltage_curve_points
+                    attribute: last_fetched
+                    name: Last fetched
+
+              - type: entities
+                title: Slot 2
+                show_header_toggle: false
+                entities:
+                  - entity: sensor.skyrc_mc3000_slot_2_status
+                    name: Status
+                  - entity: sensor.skyrc_mc3000_slot_2_battery_type
+                    name: Battery
+                  - entity: sensor.skyrc_mc3000_slot_2_mode
+                    name: Mode
+                  - entity: sensor.skyrc_mc3000_slot_2_voltage
+                    name: Voltage
+                  - entity: sensor.skyrc_mc3000_slot_2_current
+                    name: Current
+                  - entity: sensor.skyrc_mc3000_slot_2_capacity
+                    name: Capacity
+                  - entity: sensor.skyrc_mc3000_slot_2_temperature
+                    name: Temperature
+                  - entity: sensor.skyrc_mc3000_slot_2_internal_resistance
+                    name: Resistance
+                  - entity: sensor.skyrc_mc3000_slot_2_elapsed_time
+                    name: Elapsed time
+                  - entity: select.skyrc_mc3000_slot_2_expected_chemistry
+                    name: Expected chemistry
+
+                  - type: divider
+
+                  - entity: button.skyrc_mc3000_slot_2_start
+                    name: Start
+                  - entity: button.skyrc_mc3000_slot_2_stop
+                    name: Stop
+                  - entity: button.skyrc_mc3000_slot_2_fetch_voltage_curve
+                    name: Fetch curve
+
+                  - type: divider
+
+                  - entity: sensor.skyrc_mc3000_slot_2_voltage_curve_points
+                    name: Curve points
+                  - type: attribute
+                    entity: sensor.skyrc_mc3000_slot_2_voltage_curve_points
+                    attribute: interval_seconds
+                    name: Curve interval
+                  - type: attribute
+                    entity: sensor.skyrc_mc3000_slot_2_voltage_curve_points
+                    attribute: min_nonzero_mv
+                    name: Curve min mV
+                  - type: attribute
+                    entity: sensor.skyrc_mc3000_slot_2_voltage_curve_points
+                    attribute: max_nonzero_mv
+                    name: Curve max mV
+                  - type: attribute
+                    entity: sensor.skyrc_mc3000_slot_2_voltage_curve_points
+                    attribute: last_fetched
+                    name: Last fetched
+
+              - type: entities
+                title: Slot 3
+                show_header_toggle: false
+                entities:
+                  - entity: sensor.skyrc_mc3000_slot_3_status
+                    name: Status
+                  - entity: sensor.skyrc_mc3000_slot_3_battery_type
+                    name: Battery
+                  - entity: sensor.skyrc_mc3000_slot_3_mode
+                    name: Mode
+                  - entity: sensor.skyrc_mc3000_slot_3_voltage
+                    name: Voltage
+                  - entity: sensor.skyrc_mc3000_slot_3_current
+                    name: Current
+                  - entity: sensor.skyrc_mc3000_slot_3_capacity
+                    name: Capacity
+                  - entity: sensor.skyrc_mc3000_slot_3_temperature
+                    name: Temperature
+                  - entity: sensor.skyrc_mc3000_slot_3_internal_resistance
+                    name: Resistance
+                  - entity: sensor.skyrc_mc3000_slot_3_elapsed_time
+                    name: Elapsed time
+                  - entity: select.skyrc_mc3000_slot_3_expected_chemistry
+                    name: Expected chemistry
+
+                  - type: divider
+
+                  - entity: button.skyrc_mc3000_slot_3_start
+                    name: Start
+                  - entity: button.skyrc_mc3000_slot_3_stop
+                    name: Stop
+                  - entity: button.skyrc_mc3000_slot_3_fetch_voltage_curve
+                    name: Fetch curve
+
+                  - type: divider
+
+                  - entity: sensor.skyrc_mc3000_slot_3_voltage_curve_points
+                    name: Curve points
+                  - type: attribute
+                    entity: sensor.skyrc_mc3000_slot_3_voltage_curve_points
+                    attribute: interval_seconds
+                    name: Curve interval
+                  - type: attribute
+                    entity: sensor.skyrc_mc3000_slot_3_voltage_curve_points
+                    attribute: min_nonzero_mv
+                    name: Curve min mV
+                  - type: attribute
+                    entity: sensor.skyrc_mc3000_slot_3_voltage_curve_points
+                    attribute: max_nonzero_mv
+                    name: Curve max mV
+                  - type: attribute
+                    entity: sensor.skyrc_mc3000_slot_3_voltage_curve_points
+                    attribute: last_fetched
+                    name: Last fetched
+
+              - type: entities
+                title: Slot 4
+                show_header_toggle: false
+                entities:
+                  - entity: sensor.skyrc_mc3000_slot_4_status
+                    name: Status
+                  - entity: sensor.skyrc_mc3000_slot_4_battery_type
+                    name: Battery
+                  - entity: sensor.skyrc_mc3000_slot_4_mode
+                    name: Mode
+                  - entity: sensor.skyrc_mc3000_slot_4_voltage
+                    name: Voltage
+                  - entity: sensor.skyrc_mc3000_slot_4_current
+                    name: Current
+                  - entity: sensor.skyrc_mc3000_slot_4_capacity
+                    name: Capacity
+                  - entity: sensor.skyrc_mc3000_slot_4_temperature
+                    name: Temperature
+                  - entity: sensor.skyrc_mc3000_slot_4_internal_resistance
+                    name: Resistance
+                  - entity: sensor.skyrc_mc3000_slot_4_elapsed_time
+                    name: Elapsed time
+                  - entity: select.skyrc_mc3000_slot_4_expected_chemistry
+                    name: Expected chemistry
+
+                  - type: divider
+
+                  - entity: button.skyrc_mc3000_slot_4_start
+                    name: Start
+                  - entity: button.skyrc_mc3000_slot_4_stop
+                    name: Stop
+                  - entity: button.skyrc_mc3000_slot_4_fetch_voltage_curve
+                    name: Fetch curve
+
+                  - type: divider
+
+                  - entity: sensor.skyrc_mc3000_slot_4_voltage_curve_points
+                    name: Curve points
+                  - type: attribute
+                    entity: sensor.skyrc_mc3000_slot_4_voltage_curve_points
+                    attribute: interval_seconds
+                    name: Curve interval
+                  - type: attribute
+                    entity: sensor.skyrc_mc3000_slot_4_voltage_curve_points
+                    attribute: min_nonzero_mv
+                    name: Curve min mV
+                  - type: attribute
+                    entity: sensor.skyrc_mc3000_slot_4_voltage_curve_points
+                    attribute: max_nonzero_mv
+                    name: Curve max mV
+                  - type: attribute
+                    entity: sensor.skyrc_mc3000_slot_4_voltage_curve_points
+                    attribute: last_fetched
+                    name: Last fetched
+
+          - type: custom:apexcharts-card
+            graph_span: 30min
+            header:
+              show: true
+              title: SkyRC MC3000 Voltage Curves
+              show_states: true
+            apex_config:
+              chart:
+                animations:
+                  enabled: false
+                height: 420
+                toolbar:
+                  show: false
+              stroke:
+                width: 2
+                curve: smooth
+              markers:
+                size: 0
+              legend:
+                show: true
+                position: bottom
+              xaxis:
+                type: datetime
+                title:
+                  text: Curve time
+              yaxis:
+                title:
+                  text: Voltage (V)
+                decimalsInFloat: 3
+                min: 1.20
+                max: 1.65
+              tooltip:
+                shared: true
+                x:
+                  format: HH:mm:ss
+            series:
+              - entity: sensor.skyrc_mc3000_slot_1_voltage_curve_points
+                name: Slot 1
+                type: line
+                data_generator: |
+                  const samples = entity.attributes.samples_v || [];
+                  const interval = entity.attributes.interval_seconds || 1;
+                  const fetched = new Date(entity.attributes.last_fetched || Date.now()).getTime();
+                  const values = samples
+                    .map((value, index) => ({ value, index }))
+                    .filter(point => point.value > 0)
+                    .filter(point => {
+                      const plotUntil = entity.attributes.plot_until_index;
+                      return plotUntil === null || plotUntil === undefined || point.index <= plotUntil;
+                    });
+                  if (!values.length) return [];
+                  const lastIndex = values[values.length - 1].index;
+                  return values.map(point => [
+                    fetched - ((lastIndex - point.index) * interval * 1000),
+                    point.value
+                  ]);
+              - entity: sensor.skyrc_mc3000_slot_2_voltage_curve_points
+                name: Slot 2
+                type: line
+                data_generator: |
+                  const samples = entity.attributes.samples_v || [];
+                  const interval = entity.attributes.interval_seconds || 1;
+                  const fetched = new Date(entity.attributes.last_fetched || Date.now()).getTime();
+                  const values = samples
+                    .map((value, index) => ({ value, index }))
+                    .filter(point => point.value > 0)
+                    .filter(point => {
+                      const plotUntil = entity.attributes.plot_until_index;
+                      return plotUntil === null || plotUntil === undefined || point.index <= plotUntil;
+                    });
+                  if (!values.length) return [];
+                  const lastIndex = values[values.length - 1].index;
+                  return values.map(point => [
+                    fetched - ((lastIndex - point.index) * interval * 1000),
+                    point.value
+                  ]);
+              - entity: sensor.skyrc_mc3000_slot_3_voltage_curve_points
+                name: Slot 3
+                type: line
+                data_generator: |
+                  const samples = entity.attributes.samples_v || [];
+                  const interval = entity.attributes.interval_seconds || 1;
+                  const fetched = new Date(entity.attributes.last_fetched || Date.now()).getTime();
+                  const values = samples
+                    .map((value, index) => ({ value, index }))
+                    .filter(point => point.value > 0)
+                    .filter(point => {
+                      const plotUntil = entity.attributes.plot_until_index;
+                      return plotUntil === null || plotUntil === undefined || point.index <= plotUntil;
+                    });
+                  if (!values.length) return [];
+                  const lastIndex = values[values.length - 1].index;
+                  return values.map(point => [
+                    fetched - ((lastIndex - point.index) * interval * 1000),
+                    point.value
+                  ]);
+              - entity: sensor.skyrc_mc3000_slot_4_voltage_curve_points
+                name: Slot 4
+                type: line
+                data_generator: |
+                  const samples = entity.attributes.samples_v || [];
+                  const interval = entity.attributes.interval_seconds || 1;
+                  const fetched = new Date(entity.attributes.last_fetched || Date.now()).getTime();
+                  const values = samples
+                    .map((value, index) => ({ value, index }))
+                    .filter(point => point.value > 0)
+                    .filter(point => {
+                      const plotUntil = entity.attributes.plot_until_index;
+                      return plotUntil === null || plotUntil === undefined || point.index <= plotUntil;
+                    });
+                  if (!values.length) return [];
+                  const lastIndex = values[values.length - 1].index;
+                  return values.map(point => [
+                    fetched - ((lastIndex - point.index) * interval * 1000),
+                    point.value
+                  ]);
