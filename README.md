@@ -1,108 +1,202 @@
 # SkyRC MC3000 Home Assistant Integration
 
-Custom Home Assistant integration for monitoring and controlling a SkyRC MC3000 battery charger over BLE.
+Custom Home Assistant integration for monitoring and basic control of a SkyRC MC3000 battery charger over BLE.
+
+This integration is intended to make the MC3000 visible and controllable from Home Assistant while keeping the charger itself responsible for battery profiles, chemistry settings, current limits, voltage limits and safety cut-offs.
 
 ## Current status
 
-Development version.
+Development version, tested on one SkyRC MC3000 installation.
 
-Tested features:
+Working features:
 
-- Read MC3000 basic data over BLE
-- Read slot data for 4 channels
-- Start a slot using the program already configured on the charger
-- Stop one slot
-- Stop all slots
-- Expected chemistry dropdown per slot
-- Chemistry interlock before starting a slot
-- Button entities for start, stop, stop all, and refresh
+- UI setup through Home Assistant config flow
+- BLE discovery by advertised MC3000 charger name
+- manual BLE address entry when discovery does not find the charger
+- read MC3000 basic device data
+- read live data from all 4 slots
+- start the program already configured on the charger for one slot
+- stop one slot
+- stop all slots
+- button entities for start, stop, stop all and refresh
+- expected-chemistry dropdown per slot
+- chemistry interlock before starting a slot
+- Companion App Mode to release the BLE connection for the SkyRC app
+- 10 second polling interval
+- slot voltage display precision suggested at 3 decimals
+- elapsed time formatted as `H:MM:SS`
 
-## Entities
+## Installation through HACS custom repository
 
-Device-level:
+Add this repository as a HACS custom repository with type `Integration`.
 
-- Input voltage
+Repository:
 
-Per slot:
+```text
+https://github.com/jperquin/ha-skyrc-mc3000
+```
 
-- Status
-- Battery type
-- Mode
-- Voltage
-- Current
-- Capacity
-- Temperature
-- Internal resistance
-- Elapsed time
-- Count
-- LED
-- Expected chemistry
-- Start button
-- Stop button
-
-## Services
-
-### skyrc_mc3000.refresh
-
-Force an immediate data refresh.
-
-### skyrc_mc3000.start_slot
-
-Start the currently configured MC3000 program on one slot.
-
-Example:
-
-    action: skyrc_mc3000.start_slot
-    data:
-      slot: 1
-
-The integration does not set charge current, battery chemistry, voltage limits, or program parameters. These must be configured on the MC3000 itself.
-
-Before starting, the integration compares the selected expected chemistry with the actual chemistry reported by the charger. If they do not match, the start command is refused.
-
-### skyrc_mc3000.stop_slot
-
-Example:
-
-    action: skyrc_mc3000.stop_slot
-    data:
-      slot: 1
-
-### skyrc_mc3000.stop_all
-
-Example:
-
-    action: skyrc_mc3000.stop_all
+Then install the integration and restart Home Assistant.
 
 ## Configuration
 
 Configuration is done through the Home Assistant UI.
 
-Go to Settings -> Devices & services -> Add integration -> SkyRC MC3000.
+Go to:
 
-The setup flow scans for BLE devices named Charger, SimpleBLEPeripheral, or HitecCharger. If the charger is not discovered, enter the BLE address manually.
+```text
+Settings → Devices & services → Add integration → SkyRC MC3000
+```
+
+The setup flow scans for BLE devices named:
+
+- `Charger`
+- `SimpleBLEPeripheral`
+- `HitecCharger`
+
+If the charger is not discovered, enter the BLE address manually.
+
+Example BLE address format:
+
+```text
+34:14:B5:3F:92:3D
+```
+
+## Entities
+
+### Device-level entities
+
+- `sensor.input_voltage`
+- `sensor.skyrc_mc3000_temperature_unit`
+- `sensor.skyrc_mc3000_display_mode`
+- `sensor.skyrc_mc3000_cooling_fan_mode`
+- `sensor.skyrc_mc3000_system_beep`
+- `sensor.skyrc_mc3000_screensaver`
+- `switch.skyrc_mc3000_companion_app_mode`
+- `button.skyrc_mc3000_refresh`
+- `button.skyrc_mc3000_stop_all`
+
+Depending on Home Assistant entity registry history, button entities may have suffixes such as `_2`. Always check the actual entity IDs under:
+
+```text
+Settings → Devices & services → SkyRC MC3000 → Entities
+```
+
+### Per-slot entities
+
+For each slot 1–4:
+
+- `sensor.slot_X_status`
+- `sensor.slot_X_battery_type`
+- `sensor.slot_X_mode`
+- `sensor.slot_X_voltage`
+- `sensor.slot_X_current`
+- `sensor.slot_X_capacity`
+- `sensor.slot_X_temperature`
+- `sensor.slot_X_internal_resistance`
+- `sensor.slot_X_elapsed_time`
+- `select.skyrc_mc3000_slot_X_expected_chemistry`
+- `button.skyrc_mc3000_slot_X_start`
+- `button.skyrc_mc3000_slot_X_stop`
+
+Replace `X` with the slot number.
+
+Example:
+
+```text
+sensor.slot_1_voltage
+select.skyrc_mc3000_slot_1_expected_chemistry
+button.skyrc_mc3000_slot_1_start
+```
+
+## Companion App Mode
+
+The MC3000 appears to allow only one BLE client at a time. If Home Assistant is connected, the SkyRC companion app may not be able to connect.
+
+Use:
+
+```text
+switch.skyrc_mc3000_companion_app_mode
+```
+
+When Companion App Mode is enabled:
+
+- Home Assistant disconnects from the MC3000
+- polling is paused
+- sensor values remain at their last known state
+- start/stop commands are blocked
+- the SkyRC app can connect to the charger
+
+When Companion App Mode is disabled:
+
+- Home Assistant resumes polling
+- the integration reconnects to the charger
+- live sensor updates continue
+
+Recommended workflow:
+
+1. Enable Companion App Mode in Home Assistant.
+2. Open the SkyRC app.
+3. Change charger programs or settings in the SkyRC app.
+4. Fully close or disconnect the SkyRC app.
+5. Disable Companion App Mode in Home Assistant.
+6. Let Home Assistant reconnect and refresh the charger state.
+
+## Services
+
+### `skyrc_mc3000.refresh`
+
+Force an immediate data refresh.
+
+```yaml
+action: skyrc_mc3000.refresh
+```
+
+### `skyrc_mc3000.start_slot`
+
+Start the currently configured MC3000 program on one slot.
+
+```yaml
+action: skyrc_mc3000.start_slot
+data:
+  slot: 1
+```
+
+Before starting, the integration compares the selected expected chemistry with the actual chemistry reported by the charger. If they do not match, the start command is refused.
+
+### `skyrc_mc3000.stop_slot`
+
+Stop one slot.
+
+```yaml
+action: skyrc_mc3000.stop_slot
+data:
+  slot: 1
+```
+
+### `skyrc_mc3000.stop_all`
+
+Stop all slots.
+
+```yaml
+action: skyrc_mc3000.stop_all
+```
 
 ## Safety model
 
-This integration starts only the program already configured on the MC3000. It does not program battery chemistry or charging parameters.
+This integration starts only the program already configured on the MC3000. It does not program battery chemistry, charge current, discharge current, voltage limits, capacity cut-off, temperature cut-off, time cut-off or other charger profile parameters.
 
-Check chemistry, cell count, current, voltage limits, and battery condition on the charger before use.
+Those settings must be configured on the MC3000 itself or through the SkyRC app.
 
-## Installation through HACS custom repository
+Before starting a slot from Home Assistant, check on the charger that the correct battery type, cell count, mode, current, voltage limits and safety limits are configured.
 
-Add this repository as a custom repository in HACS with type Integration, then install and restart Home Assistant.
+The expected-chemistry dropdown in Home Assistant is a start interlock only. It does not change the charger profile.
 
 ## Example Lovelace dashboard card
 
-The example below uses standard Home Assistant cards only. Entity IDs may differ slightly on existing installations if Home Assistant has already assigned entity names before installing newer versions of the integration.
+The example below uses standard Home Assistant cards only. No custom frontend cards are required.
 
-This card shows:
-
-- charger input voltage and device status
-- companion app mode switch
-- refresh and stop-all controls
-- all four slots with status, measurements, expected chemistry, start and stop buttons
-- elapsed time in `H:MM:SS` format
+Check your actual entity IDs before using this YAML. Existing installations may have suffixes such as `_2` if entities were created before a later integration upgrade.
 
 ```yaml
 type: vertical-stack
@@ -255,3 +349,17 @@ cards:
             name: Start
           - entity: button.skyrc_mc3000_slot_4_stop
             name: Stop
+```
+
+## Known limitations
+
+- No charger profile editing from Home Assistant.
+- No setting of charge current, discharge current, chemistry, voltage limits or cut-offs from Home Assistant.
+- No voltage curve support yet.
+- Tested on one MC3000 installation only.
+
+## Development notes
+
+This integration currently uses the public `skyrc-ble` library API for connecting, polling, starting and stopping the MC3000.
+
+Profile editing is intentionally not exposed until the BLE profile/program write protocol is properly understood and validated.
