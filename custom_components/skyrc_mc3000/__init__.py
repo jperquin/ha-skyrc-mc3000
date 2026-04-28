@@ -11,7 +11,7 @@ from .const import CONF_ADDRESS, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
-PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.SELECT, Platform.BUTTON]
+PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.SELECT, Platform.BUTTON, Platform.SWITCH]
 
 SERVICE_REFRESH = "refresh"
 SERVICE_START_SLOT = "start_slot"
@@ -57,6 +57,12 @@ def _get_actual_chemistry(coordinator, channel: int) -> str | None:
 
 async def _get_connected_charger(hass: HomeAssistant):
     coordinator = hass.data[DOMAIN]["coordinator"]
+
+    if getattr(coordinator, "pause_polling", False):
+        raise HomeAssistantError(
+            "SkyRC MC3000 companion app mode is active; disable it before sending commands."
+        )
+
     charger = await coordinator._ensure_charger()
 
     if not charger.is_connected:

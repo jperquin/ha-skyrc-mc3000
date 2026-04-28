@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from homeassistant.components.button import ButtonEntity
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
@@ -75,6 +76,11 @@ class SkyrcMc3000StopAllButton(SkyrcMc3000BaseButton):
 
     async def async_press(self) -> None:
         """Stop all slots."""
+        if getattr(self.coordinator, "pause_polling", False):
+            raise HomeAssistantError(
+                "SkyRC MC3000 companion app mode is active; disable it before sending commands."
+            )
+
         charger = await self.coordinator._ensure_charger()
 
         if not charger.is_connected:
@@ -103,6 +109,11 @@ class SkyrcMc3000StartSlotButton(SkyrcMc3000BaseButton):
 
     async def async_press(self) -> None:
         """Start slot using charger-configured program."""
+        if getattr(self.coordinator, "pause_polling", False):
+            raise HomeAssistantError(
+                "SkyRC MC3000 companion app mode is active; disable it before sending commands."
+            )
+
         charger = await self.coordinator._ensure_charger()
 
         if not charger.is_connected:
@@ -129,6 +140,11 @@ class SkyrcMc3000StopSlotButton(SkyrcMc3000BaseButton):
 
     async def async_press(self) -> None:
         """Stop slot."""
+        if getattr(self.coordinator, "pause_polling", False):
+            raise HomeAssistantError(
+                "SkyRC MC3000 companion app mode is active; disable it before sending commands."
+            )
+
         charger = await self.coordinator._ensure_charger()
 
         if not charger.is_connected:

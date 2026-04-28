@@ -36,6 +36,25 @@ def _channel_value(channel, attr: str):
     return getattr(channel, attr, None)
 
 
+def _format_seconds(value: Any) -> str | None:
+    """Format seconds as H:MM:SS."""
+    if value is None:
+        return None
+
+    try:
+        total_seconds = int(value)
+    except (TypeError, ValueError):
+        return None
+
+    if total_seconds < 0:
+        return None
+
+    hours, remainder = divmod(total_seconds, 3600)
+    minutes, seconds = divmod(remainder, 60)
+
+    return f"{hours}:{minutes:02d}:{seconds:02d}"
+
+
 CHANNEL_SENSORS: tuple[SkyrcSensorDescription, ...] = (
     SkyrcSensorDescription(
         key="status",
@@ -112,11 +131,11 @@ CHANNEL_SENSORS: tuple[SkyrcSensorDescription, ...] = (
     SkyrcSensorDescription(
         key="time",
         name="Elapsed Time",
-        native_unit_of_measurement=UnitOfTime.SECONDS,
-        device_class=SensorDeviceClass.DURATION,
-        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=None,
+        device_class=None,
+        state_class=None,
         icon="mdi:timer-outline",
-        value_fn=lambda ch: _channel_value(ch, "time"),
+        value_fn=lambda ch: _format_seconds(_channel_value(ch, "time")),
     ),
 )
 
@@ -206,6 +225,9 @@ class SkyrcMc3000BaseSensor(CoordinatorEntity, SensorEntity):
         self._attr_device_class = description.device_class
         self._attr_state_class = description.state_class
         self._attr_icon = description.icon
+
+        if description.key == "voltage":
+            self._attr_suggested_display_precision = 3
 
     @property
     def device_info(self):

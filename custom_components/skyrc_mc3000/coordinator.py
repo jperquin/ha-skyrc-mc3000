@@ -15,7 +15,7 @@ from .const import DOMAIN
 _LOGGER = logging.getLogger(__name__)
 
 SCAN_TIMEOUT = 30.0
-UPDATE_INTERVAL = timedelta(seconds=60)
+UPDATE_INTERVAL = timedelta(seconds=10)
 
 
 class SkyrcMc3000Coordinator(DataUpdateCoordinator):
@@ -32,6 +32,7 @@ class SkyrcMc3000Coordinator(DataUpdateCoordinator):
         self.charger: Mc3000 | None = None
         self._last_device = None
         self._last_good_data = None
+        self.pause_polling = False
 
     async def _find_device(self):
         """Find charger BLEDevice by configured address or known MC3000 name."""
@@ -75,6 +76,9 @@ class SkyrcMc3000Coordinator(DataUpdateCoordinator):
 
     async def _ensure_charger(self) -> Mc3000:
         """Ensure charger object exists."""
+        if self.pause_polling:
+            raise UpdateFailed("SkyRC MC3000 polling paused for companion app mode")
+
         if self.charger is not None:
             return self.charger
 
@@ -88,6 +92,30 @@ class SkyrcMc3000Coordinator(DataUpdateCoordinator):
         self._last_device = device
         self.charger = Mc3000(device)
         return self.charger
+
+    async def async_enable_companion_app_mode(self) -> None:
+        """Pause polling and disconnect BLE so the companion app can connect."""
+        _LOGGER.info("SkyRC MC3000: enabling companion app mode")
+
+        self.pause_polling = True
+
+        if self.charger is not None:
+            try:
+                if self.charger.is_connected:
+                    await self.charger.disconnect()
+            except Exception as err:
+                _LOGGER.warning("SkyRC MC3000: disconnect during companion mode failed: %r", err)
+
+        self.charger = None
+        self.async_update_listeners()
+
+    async def async_disable_companion_app_mode(self) -> None:
+        """Resume polling after companion app use."""
+        _LOGGER.info("SkyRC MC3000: disabling companion app mode")
+
+        self.pause_polling = False
+        self.charger = None
+        await self.async_request_refresh()
 
     def _build_data(self, charger: Mc3000):
         """Build coordinator data from charger state."""
@@ -111,6 +139,13 @@ class SkyrcMc3000Coordinator(DataUpdateCoordinator):
 
     async def _async_update_data(self):
         """Fetch data from charger."""
+        if self.pause_polling:
+            if self._last_good_data is not None:
+                _LOGGER.debug("SkyRC MC3000: polling paused; returning last known data")
+                return self._last_good_data
+
+            raise UpdateFailed("SkyRC MC3000 polling paused for companion app mode")
+
         try:
             charger = await self._ensure_charger()
 
