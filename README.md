@@ -6,9 +6,9 @@ This integration exposes MC3000 charger status, slot data, start/stop controls, 
 
 Current release track:
 
-    v0.10.0-beta
+    v0.10.0
 
-This beta adds:
+This release adds:
 
 - Home Assistant Bluetooth API support
 - ESPHome Bluetooth Proxy support
@@ -17,6 +17,12 @@ This beta adds:
 - voltage curve timing metadata
 - an ApexCharts dashboard example
 - Companion App Mode to release the BLE connection for the SkyRC companion app
+- quiet recovery from transient BLE disconnects and response timeouts
+
+Recoverable BLE disconnects keep the last known sensor data and reconnect on
+the next poll. They are logged at debug level. Initial connection failures and
+failures without usable cached data remain visible through Home Assistant's
+coordinator error reporting.
 
 ---
 

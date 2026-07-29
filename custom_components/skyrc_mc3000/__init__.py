@@ -8,6 +8,7 @@ from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import HomeAssistantError
 
 from .const import CONF_ADDRESS, DOMAIN
+from .logging_utils import install_library_log_filter, remove_library_log_filter
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -86,6 +87,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     from .coordinator import SkyrcMc3000Coordinator
 
     hass.data.setdefault(DOMAIN, {})
+    if "library_log_filter" not in hass.data[DOMAIN]:
+        hass.data[DOMAIN]["library_log_filter"] = install_library_log_filter()
 
     address = entry.data[CONF_ADDRESS]
     coordinator = SkyrcMc3000Coordinator(hass, address)
@@ -177,5 +180,8 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     if unload_ok:
         hass.data.get(DOMAIN, {}).pop("coordinator", None)
+        log_filter = hass.data.get(DOMAIN, {}).pop("library_log_filter", None)
+        if log_filter is not None:
+            remove_library_log_filter(log_filter)
 
     return unload_ok

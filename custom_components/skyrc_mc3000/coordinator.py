@@ -53,7 +53,7 @@ class SkyrcMc3000Coordinator(DataUpdateCoordinator):
         )
 
         if device is not None:
-            _LOGGER.warning(
+            _LOGGER.debug(
                 "SkyRC MC3000: HA Bluetooth found target: name=%r address=%r details=%r metadata=%r",
                 getattr(device, "name", None),
                 getattr(device, "address", None),
@@ -62,7 +62,7 @@ class SkyrcMc3000Coordinator(DataUpdateCoordinator):
             )
             return device
 
-        _LOGGER.warning(
+        _LOGGER.debug(
             "SkyRC MC3000: HA Bluetooth did not return connectable BLEDevice for %s",
             self.address,
         )
@@ -70,7 +70,7 @@ class SkyrcMc3000Coordinator(DataUpdateCoordinator):
 
     async def _find_device_via_bleak_fallback(self):
         """Fallback direct Bleak scan for local BlueZ adapters."""
-        _LOGGER.warning(
+        _LOGGER.debug(
             "SkyRC MC3000: falling back to direct Bleak scan for %s",
             self.address,
         )
@@ -85,7 +85,7 @@ class SkyrcMc3000Coordinator(DataUpdateCoordinator):
             address = device.address or ""
 
             if address.upper() == self.address.upper():
-                _LOGGER.warning(
+                _LOGGER.debug(
                     "SkyRC MC3000: direct Bleak found target: name=%r address=%r details=%r metadata=%r",
                     name,
                     address,
@@ -146,7 +146,7 @@ class SkyrcMc3000Coordinator(DataUpdateCoordinator):
 
     async def async_enable_companion_app_mode(self) -> None:
         """Pause polling and disconnect BLE so the companion app can connect."""
-        _LOGGER.warning("SkyRC MC3000: enabling companion app mode")
+        _LOGGER.info("SkyRC MC3000: enabling companion app mode")
 
         self.pause_polling = True
 
@@ -163,7 +163,7 @@ class SkyrcMc3000Coordinator(DataUpdateCoordinator):
 
     async def async_disable_companion_app_mode(self) -> None:
         """Resume polling after companion app use."""
-        _LOGGER.warning("SkyRC MC3000: disabling companion app mode")
+        _LOGGER.info("SkyRC MC3000: disabling companion app mode")
 
         self.pause_polling = False
         self.charger = None
@@ -202,7 +202,7 @@ class SkyrcMc3000Coordinator(DataUpdateCoordinator):
             ):
                 # First observed transition to zero current.
                 self._slot_current_zero_elapsed[slot_index] = int(elapsed) if elapsed is not None else None
-                _LOGGER.warning(
+                _LOGGER.debug(
                     "SkyRC MC3000: slot %s current reached zero at elapsed=%s",
                     slot_index + 1,
                     self._slot_current_zero_elapsed[slot_index],
@@ -468,8 +468,12 @@ class SkyrcMc3000Coordinator(DataUpdateCoordinator):
 
             if not charger.is_connected:
                 await charger.connect()
+                if not charger.is_connected:
+                    raise ConnectionError("SkyRC MC3000 BLE connection was not established")
 
             await charger.update()
+            if not charger.is_connected:
+                raise ConnectionError("SkyRC MC3000 disconnected during polling")
 
             data = self._build_data(charger)
             self._track_current_transitions(data)
@@ -484,8 +488,9 @@ class SkyrcMc3000Coordinator(DataUpdateCoordinator):
             self._last_device = None
 
             if self._last_good_data is not None:
-                _LOGGER.warning(
-                    "SkyRC MC3000: update failed, keeping last known data: %r",
+                _LOGGER.debug(
+                    "SkyRC MC3000: transient update failure; reconnecting on the next poll "
+                    "and keeping last known data: %r",
                     err,
                 )
                 return self._last_good_data
