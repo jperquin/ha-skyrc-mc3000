@@ -6,7 +6,7 @@ This integration exposes MC3000 charger status, slot data, start/stop controls, 
 
 Current release track:
 
-    v1.0.0
+    v1.1.0
 
 This release adds:
 
@@ -19,6 +19,7 @@ This release adds:
 - Companion App Mode to release the BLE connection for the SkyRC companion app
 - quiet recovery from transient BLE disconnects and response timeouts
 - safe, explicit upload of complete MC3000 work programs
+- a chemistry-checked Start all dashboard control
 
 Recoverable BLE disconnects keep the last known sensor data and reconnect on
 the next poll. They are logged at debug level. Initial connection failures and
@@ -205,6 +206,7 @@ Elapsed time is formatted as:
 The integration exposes buttons for:
 
 - refresh charger state
+- start all slots, with the per-slot Expected Chemistry checks
 - stop all slots
 - start slot 1-4
 - stop slot 1-4
@@ -213,6 +215,7 @@ The integration exposes buttons for:
 Typical entity IDs:
 
     button.skyrc_mc3000_refresh
+    button.skyrc_mc3000_start_all
     button.skyrc_mc3000_stop_all
     button.skyrc_mc3000_slot_1_start
     button.skyrc_mc3000_slot_1_stop

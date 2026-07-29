@@ -12,7 +12,7 @@
   "requirements": [
     "skyrc-ble @ https://github.com/jperquin/skyrc-ble/archive/refs/tags/v3.0.0.zip"
   ],
-  "version": "1.0.0",
+  "version": "1.1.0",
   "dependencies": [
     "bluetooth",
     "bluetooth_adapters"

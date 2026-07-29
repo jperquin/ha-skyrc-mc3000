@@ -13,6 +13,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
     entities = [
         SkyrcMc3000RefreshButton(coordinator),
+        SkyrcMc3000StartAllButton(coordinator),
         SkyrcMc3000StopAllButton(coordinator),
     ]
 
@@ -108,6 +109,30 @@ class SkyrcMc3000StopAllButton(SkyrcMc3000BaseButton):
                 await charger.stop_charge(channel)
 
         await self.coordinator.async_request_refresh()
+
+
+class SkyrcMc3000StartAllButton(SkyrcMc3000BaseButton):
+    """Start all SkyRC MC3000 slots."""
+
+    _attr_name = "SkyRC MC3000 Start All"
+    _attr_icon = "mdi:play-circle-outline"
+    _attr_suggested_object_id = "skyrc_mc3000_start_all"
+
+    def __init__(self, coordinator) -> None:
+        super().__init__(coordinator)
+        self._attr_unique_id = f"skyrc_mc3000_{coordinator.address}_start_all"
+
+    async def async_press(self) -> None:
+        """Start all slots through the chemistry-checked start service."""
+        self._raise_if_companion_mode()
+
+        for slot in range(1, 5):
+            await self.hass.services.async_call(
+                DOMAIN,
+                "start_slot",
+                {"slot": slot},
+                blocking=True,
+            )
 
 
 class SkyrcMc3000SlotStartButton(SkyrcMc3000BaseButton):

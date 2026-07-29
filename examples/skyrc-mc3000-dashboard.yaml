@@ -33,6 +33,17 @@ views:
 
               - entity: button.skyrc_mc3000_refresh
                 name: Refresh
+              - type: button
+                name: Start all
+                icon: mdi:play-circle-outline
+                action_name: Start
+                tap_action:
+                  action: perform-action
+                  perform_action: button.press
+                  target:
+                    entity_id: button.skyrc_mc3000_start_all
+                  confirmation:
+                    text: Start all four MC3000 slots with their configured programs?
               - entity: button.skyrc_mc3000_stop_all
                 name: Stop all
 
