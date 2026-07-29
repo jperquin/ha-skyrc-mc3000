@@ -213,8 +213,8 @@ class SkyrcMc3000Coordinator(DataUpdateCoordinator):
     async def _async_fetch_voltage_curve_data_fallback(self, charger: Mc3000, slot_index: int) -> dict:
         """Fetch and parse MC3000 voltage curve using raw 0x56 protocol.
 
-        This fallback keeps voltage-curve support working with skyrc-ble==2.1.0,
-        which exposes _send_packet() but does not yet expose get_voltage_curve_data().
+        This defensive compatibility path is only used when the installed
+        skyrc-ble does not expose get_voltage_curve_data().
         """
         import asyncio
         from skyrc_ble.mc3000 import CMD_GET_VOLTAGE_CURVE

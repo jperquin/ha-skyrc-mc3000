@@ -6,7 +6,7 @@ This integration exposes MC3000 charger status, slot data, start/stop controls, 
 
 Current release track:
 
-    v0.10.0
+    v1.0.0
 
 This release adds:
 
@@ -18,6 +18,7 @@ This release adds:
 - an ApexCharts dashboard example
 - Companion App Mode to release the BLE connection for the SkyRC companion app
 - quiet recovery from transient BLE disconnects and response timeouts
+- safe, explicit upload of complete MC3000 work programs
 
 Recoverable BLE disconnects keep the last known sensor data and reconnect on
 the next poll. They are logged at debug level. Initial connection failures and
@@ -41,7 +42,9 @@ The current implementation can:
 - auto-fetch voltage curves for active slots
 - display voltage curves in Lovelace through ApexCharts
 
-It does not yet write or modify charger profiles/programs.
+Complete charger profiles can be uploaded through the `write_program` service.
+The service requires every safety-critical setting and never starts a slot
+automatically.
 
 ---
 
@@ -55,9 +58,10 @@ It does not yet write or modify charger profiles/programs.
 
 Python dependency:
 
-    skyrc-ble==2.1.0
+    skyrc-ble @ https://github.com/jperquin/skyrc-ble/archive/refs/tags/v3.0.0.zip
 
-The integration contains a local fallback parser for MC3000 voltage curves, so the voltage curve functionality works with skyrc-ble==2.1.0.
+MC3000 voltage-curve parsing and complete program writes are provided by the
+immutable `skyrc-ble` v3.0.0 GitHub release tag.
 
 ---
 
@@ -216,7 +220,17 @@ Typical entity IDs:
 
 Repeat for slots 2, 3, and 4.
 
-The start buttons start the program already configured on the MC3000 for that slot. They do not program charge parameters.
+The start buttons start the program already configured on the MC3000 for that slot.
+They do not program charge parameters.
+
+Use the `skyrc_mc3000.write_program` service to upload a complete program first.
+The charger protocol cannot change only the battery chemistry: every upload also
+contains the currents, voltage limits and protection values. The write service
+therefore requires all safety-critical fields and never starts the program
+automatically.
+
+The existing Expected Chemistry selects remain a start-time safety policy. They
+do not write to the charger.
 
 ### Switches
 
@@ -386,23 +400,45 @@ The chart filters out zero samples so empty tail values do not pull the graph do
 
 ---
 
-## Limitations
+## Writing programs
 
-The integration currently does not support writing MC3000 programs or charge profiles.
+The `skyrc_mc3000.write_program` service uploads a complete program to one slot.
+It implements the official two-frame `0x11` protocol:
 
-Not supported yet:
+- slot selection is a bitmask
+- each frame is 20 bytes
+- the delay between frames is 50 milliseconds
+- the final checksum is cumulative over both frames
+- the MC3000 must acknowledge the upload before the service succeeds
 
-- setting charge current
-- setting discharge current
-- setting cutoff voltage
-- setting cutoff capacity
-- setting temperature limits
-- editing charger profiles/programs
-- uploading complete programs to the MC3000
+Example using the official app's saved `NiMH Charge` values:
 
-Use the official SkyRC companion app for profile/program changes.
+```yaml
+action: skyrc_mc3000.write_program
+data:
+  slot: 1
+  battery_type: nimh
+  operation: charge
+  capacity: 3500
+  charge_current: 1.0
+  discharge_current: 0.2
+  charge_voltage: 1650
+  discharge_voltage: 1000
+  charge_end_current: 990
+  discharge_end_current: 200
+  cycle_time: 0
+  cycle_count: 1
+  cycle_type: 0
+  delta_v: 10
+  trickle_current: 10
+  maintenance_voltage: 4150
+  protection_temperature: 19
+  protection_time: 0
+  discharge_time: 0
+```
 
-When using the official app, enable Companion App Mode in Home Assistant first.
+Review every value for the actual battery before calling the service. Use
+`skyrc_mc3000.start_slot` separately after the upload and chemistry verification.
 
 ---
 
@@ -457,11 +493,12 @@ Start/stop uses a channel bitmask:
     slot 4 = 0x08
     all    = 0x0f
 
-The voltage curve fallback parser is currently implemented in the Home Assistant integration so the feature works with skyrc-ble==2.1.0.
-
-A cleaner long-term implementation would move voltage curve support into skyrc-ble itself, for example:
+Voltage-curve parsing is provided by `skyrc-ble==3.0.0` through:
 
     async def get_voltage_curve_data(channel: int) -> Mc3000VoltageCurveData
+
+The integration retains its older raw-protocol fallback for defensive
+compatibility, but the pinned library normally handles this path.
 
 ---
 

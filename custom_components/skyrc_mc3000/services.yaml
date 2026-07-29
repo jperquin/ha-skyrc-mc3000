@@ -33,3 +33,140 @@ start_slot:
 refresh:
   name: Refresh data
   description: Force an immediate data refresh from the MC3000.
+
+write_program:
+  name: Write complete program
+  description: >-
+    Write a complete program to one MC3000 slot. The MC3000 cannot change only
+    the battery chemistry; all current, voltage and protection parameters are
+    written together. This service does not start the program.
+  fields:
+    slot:
+      name: Slot
+      description: Slot number, 1 to 4.
+      required: true
+      selector:
+        number:
+          min: 1
+          max: 4
+          mode: box
+    battery_type:
+      name: Battery type
+      required: true
+      selector:
+        select:
+          options:
+            - liion
+            - life
+            - liion_4_35
+            - nimh
+            - nicd
+            - nizn
+            - eneloop
+            - ram
+            - batlto
+    operation:
+      name: Operation
+      required: true
+      selector:
+        select:
+          options:
+            - charge
+            - refresh
+            - storage
+            - breakin
+            - discharge
+            - cycle
+    capacity:
+      name: Capacity
+      description: Capacity protection value in mAh.
+      required: true
+      selector: &word
+        number:
+          min: 0
+          max: 65535
+          mode: box
+    charge_current:
+      name: Charge current
+      description: Charge current in amperes, in 0.001 A increments.
+      required: true
+      selector: &current
+        number:
+          min: 0
+          max: 65.535
+          step: 0.001
+          unit_of_measurement: A
+          mode: box
+    discharge_current:
+      name: Discharge current
+      description: Discharge current in amperes, in 0.001 A increments.
+      required: true
+      selector: *current
+    charge_voltage:
+      name: Charge voltage
+      description: Charge voltage limit in millivolts.
+      required: true
+      selector: *word
+    discharge_voltage:
+      name: Discharge voltage
+      description: Discharge voltage limit in millivolts.
+      required: true
+      selector: *word
+    charge_end_current:
+      name: Charge end current
+      description: Charge termination current in milliamperes.
+      required: true
+      selector: *word
+    discharge_end_current:
+      name: Discharge end current
+      description: Discharge termination current in milliamperes.
+      required: true
+      selector: *word
+    cycle_time:
+      name: Cycle time
+      default: 0
+      selector: &byte
+        number:
+          min: 0
+          max: 255
+          mode: box
+    cycle_count:
+      name: Cycle count
+      default: 1
+      selector: *byte
+    cycle_type:
+      name: Cycle type
+      default: 0
+      selector: *byte
+    delta_v:
+      name: Delta V
+      default: 0
+      selector: *byte
+    trickle_current:
+      name: Trickle current
+      description: Trickle current in milliamperes, in 10 mA increments.
+      default: 0
+      selector:
+        number:
+          min: 0
+          max: 255
+          step: 10
+          unit_of_measurement: mA
+          mode: box
+    maintenance_voltage:
+      name: Maintenance voltage
+      description: Maintenance voltage in millivolts.
+      default: 0
+      selector: *word
+    protection_temperature:
+      name: Protection temperature
+      default: 0
+      selector: *byte
+    protection_time:
+      name: Protection time
+      default: 0
+      selector: *word
+    discharge_time:
+      name: Discharge time
+      default: 0
+      selector: *byte

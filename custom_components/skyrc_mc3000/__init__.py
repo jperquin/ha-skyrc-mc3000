@@ -18,8 +18,40 @@ SERVICE_REFRESH = "refresh"
 SERVICE_START_SLOT = "start_slot"
 SERVICE_STOP_SLOT = "stop_slot"
 SERVICE_STOP_ALL = "stop_all"
+SERVICE_WRITE_PROGRAM = "write_program"
 
 ATTR_SLOT = "slot"
+ATTR_BATTERY_TYPE = "battery_type"
+ATTR_OPERATION = "operation"
+ATTR_CAPACITY = "capacity"
+ATTR_CHARGE_CURRENT = "charge_current"
+ATTR_DISCHARGE_CURRENT = "discharge_current"
+ATTR_CHARGE_VOLTAGE = "charge_voltage"
+ATTR_DISCHARGE_VOLTAGE = "discharge_voltage"
+ATTR_CHARGE_END_CURRENT = "charge_end_current"
+ATTR_DISCHARGE_END_CURRENT = "discharge_end_current"
+ATTR_CYCLE_TIME = "cycle_time"
+ATTR_CYCLE_COUNT = "cycle_count"
+ATTR_CYCLE_TYPE = "cycle_type"
+ATTR_DELTA_V = "delta_v"
+ATTR_TRICKLE_CURRENT = "trickle_current"
+ATTR_MAINTENANCE_VOLTAGE = "maintenance_voltage"
+ATTR_PROTECTION_TEMPERATURE = "protection_temperature"
+ATTR_PROTECTION_TIME = "protection_time"
+ATTR_DISCHARGE_TIME = "discharge_time"
+
+BATTERY_TYPES = {
+    "liion",
+    "life",
+    "liion_4_35",
+    "nimh",
+    "nicd",
+    "nizn",
+    "eneloop",
+    "ram",
+    "batlto",
+}
+OPERATIONS = {"charge", "refresh", "storage", "breakin", "discharge", "cycle"}
 
 
 def _normalize_chemistry(value) -> str | None:
@@ -78,6 +110,48 @@ def _slot_schema():
     return vol.Schema(
         {
             vol.Required(ATTR_SLOT): vol.All(vol.Coerce(int), vol.Range(min=1, max=4)),
+        }
+    )
+
+
+def _write_program_schema():
+    import voluptuous as vol
+
+    def trickle_current(value):
+        value = int(value)
+        if value % 10:
+            raise vol.Invalid("trickle_current must use 10 mA increments")
+        return value
+
+    byte = vol.All(vol.Coerce(int), vol.Range(min=0, max=255))
+    word = vol.All(vol.Coerce(int), vol.Range(min=0, max=65535))
+    current = vol.All(vol.Coerce(float), vol.Range(min=0, max=65.535))
+
+    return vol.Schema(
+        {
+            vol.Required(ATTR_SLOT): vol.All(
+                vol.Coerce(int), vol.Range(min=1, max=4)
+            ),
+            vol.Required(ATTR_BATTERY_TYPE): vol.In(BATTERY_TYPES),
+            vol.Required(ATTR_OPERATION): vol.In(OPERATIONS),
+            vol.Required(ATTR_CAPACITY): word,
+            vol.Required(ATTR_CHARGE_CURRENT): current,
+            vol.Required(ATTR_DISCHARGE_CURRENT): current,
+            vol.Required(ATTR_CHARGE_VOLTAGE): word,
+            vol.Required(ATTR_DISCHARGE_VOLTAGE): word,
+            vol.Required(ATTR_CHARGE_END_CURRENT): word,
+            vol.Required(ATTR_DISCHARGE_END_CURRENT): word,
+            vol.Optional(ATTR_CYCLE_TIME, default=0): byte,
+            vol.Optional(ATTR_CYCLE_COUNT, default=1): byte,
+            vol.Optional(ATTR_CYCLE_TYPE, default=0): byte,
+            vol.Optional(ATTR_DELTA_V, default=0): byte,
+            vol.Optional(ATTR_TRICKLE_CURRENT, default=0): vol.All(
+                byte, trickle_current
+            ),
+            vol.Optional(ATTR_MAINTENANCE_VOLTAGE, default=0): word,
+            vol.Optional(ATTR_PROTECTION_TEMPERATURE, default=0): byte,
+            vol.Optional(ATTR_PROTECTION_TIME, default=0): word,
+            vol.Optional(ATTR_DISCHARGE_TIME, default=0): byte,
         }
     )
 
@@ -148,6 +222,49 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
         await coordinator.async_request_refresh()
 
+    async def async_handle_write_program(call: ServiceCall) -> None:
+        from skyrc_ble.models import (
+            BatteryType,
+            ChannelMode,
+            Mc3000Program,
+        )
+
+        slot = call.data[ATTR_SLOT]
+        channel = slot - 1
+        battery_type = BatteryType[call.data[ATTR_BATTERY_TYPE].upper()]
+        operation = ChannelMode[call.data[ATTR_OPERATION].upper()]
+
+        program = Mc3000Program(
+            battery_type=battery_type,
+            operation=operation,
+            capacity=call.data[ATTR_CAPACITY],
+            charge_current=call.data[ATTR_CHARGE_CURRENT],
+            discharge_current=call.data[ATTR_DISCHARGE_CURRENT],
+            charge_voltage=call.data[ATTR_CHARGE_VOLTAGE],
+            discharge_voltage=call.data[ATTR_DISCHARGE_VOLTAGE],
+            charge_end_current=call.data[ATTR_CHARGE_END_CURRENT],
+            discharge_end_current=call.data[ATTR_DISCHARGE_END_CURRENT],
+            cycle_time=call.data[ATTR_CYCLE_TIME],
+            cycle_count=call.data[ATTR_CYCLE_COUNT],
+            cycle_type=call.data[ATTR_CYCLE_TYPE],
+            delta_v=call.data[ATTR_DELTA_V],
+            trickle_current=call.data[ATTR_TRICKLE_CURRENT],
+            maintenance_voltage=call.data[ATTR_MAINTENANCE_VOLTAGE],
+            protection_temperature=call.data[ATTR_PROTECTION_TEMPERATURE],
+            protection_time=call.data[ATTR_PROTECTION_TIME],
+            discharge_time=call.data[ATTR_DISCHARGE_TIME],
+        )
+
+        charger, coordinator = await _get_connected_charger(hass)
+        _LOGGER.info(
+            "SkyRC MC3000: writing complete %s/%s program to slot %s",
+            call.data[ATTR_BATTERY_TYPE],
+            call.data[ATTR_OPERATION],
+            slot,
+        )
+        await charger.write_program(channel, program)
+        await coordinator.async_request_refresh()
+
     if not hass.services.has_service(DOMAIN, SERVICE_REFRESH):
         hass.services.async_register(DOMAIN, SERVICE_REFRESH, async_handle_refresh)
 
@@ -169,6 +286,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     if not hass.services.has_service(DOMAIN, SERVICE_STOP_ALL):
         hass.services.async_register(DOMAIN, SERVICE_STOP_ALL, async_handle_stop_all)
+
+    if not hass.services.has_service(DOMAIN, SERVICE_WRITE_PROGRAM):
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_WRITE_PROGRAM,
+            async_handle_write_program,
+            schema=_write_program_schema(),
+        )
 
     hass.async_create_task(coordinator.async_refresh())
 

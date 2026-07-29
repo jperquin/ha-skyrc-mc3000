@@ -7,15 +7,15 @@ from .const import CONF_ADDRESS, DOMAIN
 
 CHEMISTRY_OPTIONS = [
     "any",
-    "nimh",
-    "nicd",
     "liion",
     "life",
-    "lipo",
-    "lizn",
+    "liion_4_35",
+    "nimh",
+    "nicd",
     "nizn",
+    "eneloop",
     "ram",
-    "pb",
+    "batlto",
 ]
 
 
