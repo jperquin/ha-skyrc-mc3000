@@ -1,0 +1,92 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "SkyRC MC3000",
+        "description": "Select your SkyRC MC3000 charger. If no charger is found, enter the BLE address manually.",
+        "data": {
+          "address": "BLE address",
+          "name": "Name"
+        }
+      }
+    },
+    "error": {
+      "no_devices_found": "No SkyRC MC3000 charger found. Make sure the charger is powered on and not connected to the SkyRC mobile app."
+    },
+    "abort": {
+      "already_configured": "This SkyRC MC3000 charger is already configured."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "battery_type": {
+        "state": {
+          "liion": "Li-Ion",
+          "life": "Li-Fe",
+          "liion_4_35": "Li-Ion 4.35V",
+          "nimh": "Ni-Mh",
+          "nicd": "Ni-Cd",
+          "nizn": "Ni-Zn",
+          "eneloop": "Eneloop",
+          "ram": "Ram",
+          "batlto": "Batlto"
+        }
+      },
+      "cooling_fan_mode": {
+        "state": {
+          "auto": "Auto",
+          "off": "Off",
+          "on": "On",
+          "temp_20c": "Temp 20°C",
+          "temp_25c": "Temp 25°C",
+          "temp_30c": "Temp 30°C",
+          "temp_35c": "Temp 35°C",
+          "temp_40c": "Temp 40°C",
+          "temp_45c": "Temp 45°C",
+          "temp_50c": "Temp 50°C"
+        }
+      },
+      "display_mode": {
+        "state": {
+          "off": "Off",
+          "auto": "Auto",
+          "time_1min": "Time 1min",
+          "time_2min": "Time 2min",
+          "time_5min": "Time 5min",
+          "always_on": "Always On"
+        }
+      },
+      "mode": {
+        "state": {
+          "charge": "Charge",
+          "refresh": "Refresh",
+          "storage": "Storage",
+          "breakin": "Breakin",
+          "discharge": "Discharge",
+          "cycle": "Cycle"
+        }
+      },
+      "status": {
+        "state": {
+          "standby": "Standby",
+          "charge": "Charge",
+          "discharge": "Discharge",
+          "pause": "Pause",
+          "done": "Done",
+          "input_voltage_low": "Input Voltage Low",
+          "input_voltage_high": "Input Voltage High",
+          "mcp3424_1_error": "MCP3424_1 Error",
+          "mcp3424_2_error": "MCP3424_2 Error",
+          "connection_break": "Connection Break",
+          "check_voltage": "Check Voltage",
+          "capacity_protection": "Capacity Protection",
+          "time_protection": "Time Protection",
+          "temp_high": "Temp High",
+          "battery_temp_high": "Battery Temp High",
+          "battery_short_circuit": "Battery Short Circuit",
+          "reverse_polarity": "Reverse Polarity"
+        }
+      }
+    }
+  }
+}
