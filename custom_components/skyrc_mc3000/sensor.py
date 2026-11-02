@@ -27,6 +27,7 @@ class SkyrcSensorDescription(SensorEntityDescription):
     """SkyRC sensor description."""
 
     value_fn: Callable[[Any], Any] | None = None
+    translation_key: str | None = None
 
 
 def _enum_value(value: Any) -> Any:
@@ -86,6 +87,7 @@ DEVICE_SENSORS: tuple[SkyrcSensorDescription, ...] = (
     SkyrcSensorDescription(
         key="display_mode",
         name="Display Mode",
+        translation_key="display_mode",
         icon="mdi:monitor",
         value_fn=lambda data: _enum_value(_basic_value(data, "display")),
         device_class=SensorDeviceClass.ENUM,
@@ -94,6 +96,7 @@ DEVICE_SENSORS: tuple[SkyrcSensorDescription, ...] = (
     SkyrcSensorDescription(
         key="cooling_fan_mode",
         name="Cooling Fan Mode",
+        translation_key="cooling_fan_mode",
         icon="mdi:fan",
         value_fn=lambda data: _enum_value(_basic_value(data, "cooling_fan")),
         device_class=SensorDeviceClass.ENUM,
@@ -118,6 +121,7 @@ CHANNEL_SENSORS: tuple[SkyrcSensorDescription, ...] = (
     SkyrcSensorDescription(
         key="status",
         name="Status",
+        translation_key="status",
         icon="mdi:information-outline",
         value_fn=lambda ch: _enum_value(_channel_value(ch, "status")),
         device_class=SensorDeviceClass.ENUM,
@@ -126,6 +130,7 @@ CHANNEL_SENSORS: tuple[SkyrcSensorDescription, ...] = (
     SkyrcSensorDescription(
         key="battery_type",
         name="Battery Type",
+        translation_key="battery_type",
         icon="mdi:battery",
         value_fn=lambda ch: _enum_value(_channel_value(ch, "type")),
         device_class=SensorDeviceClass.ENUM,
@@ -134,6 +139,7 @@ CHANNEL_SENSORS: tuple[SkyrcSensorDescription, ...] = (
     SkyrcSensorDescription(
         key="mode",
         name="Mode",
+        translation_key="mode",
         icon="mdi:battery-charging",
         value_fn=lambda ch: _enum_value(_channel_value(ch, "mode")),
         device_class=SensorDeviceClass.ENUM,
@@ -222,6 +228,7 @@ class SkyrcMc3000BaseSensor(CoordinatorEntity, SensorEntity):
             self._attr_native_unit_of_measurement = description.native_unit_of_measurement
             self._attr_device_class = description.device_class
             self._attr_options = description.options
+            self._attr_translation_key = description.translation_key
             self._attr_state_class = description.state_class
             self._attr_icon = description.icon
             self._attr_entity_category = description.entity_category
