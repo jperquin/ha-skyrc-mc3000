@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Callable
 
-from skyrc_ble.models import ChannelStatus
+from skyrc_ble.models import DisplayMode, CoolingFanMode, BatteryType, ChannelMode, ChannelStatus
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -88,12 +88,16 @@ DEVICE_SENSORS: tuple[SkyrcSensorDescription, ...] = (
         name="Display Mode",
         icon="mdi:monitor",
         value_fn=lambda data: _enum_value(_basic_value(data, "display")),
+        device_class=SensorDeviceClass.ENUM,
+        options=[v.name.lower() for v in DisplayMode],
     ),
     SkyrcSensorDescription(
         key="cooling_fan_mode",
         name="Cooling Fan Mode",
         icon="mdi:fan",
         value_fn=lambda data: _enum_value(_basic_value(data, "cooling_fan")),
+        device_class=SensorDeviceClass.ENUM,
+        options=[v.name.lower() for v in CoolingFanMode],
     ),
     SkyrcSensorDescription(
         key="system_beep",
@@ -124,12 +128,16 @@ CHANNEL_SENSORS: tuple[SkyrcSensorDescription, ...] = (
         name="Battery Type",
         icon="mdi:battery",
         value_fn=lambda ch: _enum_value(_channel_value(ch, "type")),
+        device_class=SensorDeviceClass.ENUM,
+        options=[v.name.lower() for v in BatteryType],
     ),
     SkyrcSensorDescription(
         key="mode",
         name="Mode",
         icon="mdi:battery-charging",
         value_fn=lambda ch: _enum_value(_channel_value(ch, "mode")),
+        device_class=SensorDeviceClass.ENUM,
+        options=[v.name.lower() for v in ChannelMode],
     ),
     SkyrcSensorDescription(
         key="voltage",
