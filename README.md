@@ -1,34 +1,71 @@
 # SkyRC MC3000 for Home Assistant
 
-Local Bluetooth monitoring and control for the four-slot SkyRC MC3000 charger.
-Uses Home Assistant's Bluetooth manager with a local adapter or ESPHome Bluetooth
-proxy. No dedicated MC3000 ESP32 firmware is required.
+**Four slots. Saved programs. Local Bluetooth control.**
 
-This development version extends upstream v1.1.0 with saved programs, optional
-dashboard cards, device settings, corrected voltage curves and optional battery
-workflows. English is the default; new cards, settings and actions also include
-Ukrainian translations.
+[![Home Assistant 2026.1+](https://img.shields.io/badge/Home%20Assistant-2026.1%2B-18BCF2?logo=homeassistant&logoColor=white)](hacs.json)
+[![Preview 1.2.0b1](https://img.shields.io/badge/Preview-1.2.0b1-orange)](https://github.com/Sergey7up/ha-skyrc-mc3000/releases)
+
+Monitor each battery, build a named program library, send settings to individual
+slots and inspect the charger's recorded voltage curves from Home Assistant.
+Connect through a local Bluetooth adapter or an **ESPHome Bluetooth proxy**;
+no dedicated MC3000 firmware, cloud account or phone app is required.
+
+[Install](#installation) · [Set up the dashboard](#dashboard) ·
+[Manage programs](#saved-programs) · [Check validation](#validation-and-limitations) ·
+[Read the protocol audit](docs/PROTOCOL.md)
+
+> **Prerelease:** `1.2.0b1` extends upstream v1.1.0. Core controls have been checked
+> on a physical charger; full capacity and 24-hour battery workflows remain
+> experimental and have automated coverage only. See the validation details below.
+
+![Four-slot program cards and a recorded-voltage curve](docs/images/dashboard-preview.png)
+
+*Actual custom cards rendered with illustrative data in an isolated preview.
+The sample profiles and curve are demonstrations, not recommended cell settings.*
+
+## What you get
+
+| Feature | Included |
+| --- | --- |
+| **Four-slot monitoring** | Status, chemistry, mode, voltage, current, capacity, temperature, resistance, elapsed time and power |
+| **Saved programs** | Named profiles, all 18 program parameters, chemistry-aware validation and upload to one or more idle slots |
+| **Charger control** | Per-slot and group start/stop, expected-chemistry checks and a switch for handing Bluetooth to the phone app |
+| **Voltage curves** | The charger's native 120-sample buffer, elapsed-time plot, point inspection and CSV export |
+| **Device settings** | Temperature units, display timeout, fan, sound, screensaver and input-voltage cutoff, with readback |
+| **Optional battery tools** | Cell inventory, slot assignments, resistance/capacity/quality workflows and exportable reports |
+| **Dashboard cards** | Responsive program editor, battery manager and curve viewer; English and Ukrainian, following the HA language |
 
 ## Installation
 
-In Home Assistant **Marketplace** (or HACS on older HA versions), add this
-repository's GitHub URL as a custom **Integration** repository and install it.
-Use the default branch for this development preview, then restart HA. Only one
-repository may own the `skyrc_mc3000` directory at a time; installing a fork over
-an already managed upstream installation may require migrating the store entry.
-Do not delete your existing device setup merely to switch update sources.
+Requires **Home Assistant 2026.1 or newer**, a SkyRC MC3000 and Bluetooth coverage
+from HA's adapter or an ESPHome proxy. One charger is supported per HA instance.
 
-For a manual installation:
+### HACS / Marketplace
 
-Copy `custom_components/skyrc_mc3000` into your HA configuration directory,
-restart Home Assistant, then add **SkyRC MC3000** in **Settings → Devices &
-services**. Select the charger or enter its Bluetooth address. Preserve the
-existing config entry and entity registry when upgrading.
+1. On **Home Assistant 2026.11+**, open **Settings → Marketplace**; on older
+   installations, open **HACS**. Add a custom repository of type **Integration**:
+   `https://github.com/Sergey7up/ha-skyrc-mc3000`.
+2. Open **SkyRC MC3000** and download the desired version. This fork's preview
+   is `v1.2.0b1`; check its [release notes](https://github.com/Sergey7up/ha-skyrc-mc3000/releases)
+   and enable prerelease versions if your store hides them.
+3. Restart Home Assistant. Under **Settings → Devices & services → Add integration**,
+   choose **SkyRC MC3000**, then select the charger or enter its Bluetooth address.
+4. Optionally install the [dashboard cards](#dashboard); they are separate files.
 
-The integration supports **one charger per HA instance**. Services target that
-charger; a second config entry is blocked rather than routing commands to the
-wrong device. The Python dependency remains pinned to `skyrc-ble` v3.0.0; a local
-adapter extends packet handling while retaining its Bleak/HA proxy transport.
+This fork is the distribution source for the preview. If installing another fork
+or an upstream release, use that repository's URL and its matching release files.
+Only one repository should manage `custom_components/skyrc_mc3000`. When switching
+update sources, preserve your existing integration entry and entity registry.
+
+### Manual installation
+
+Download the source archive for your chosen version. Copy
+`custom_components/skyrc_mc3000` into your HA configuration directory, restart HA
+and add the integration as above. Upgrade an existing installation in place.
+
+The Python dependency is pinned to `skyrc-ble` v3.0.0. A local protocol adapter
+extends packet handling while retaining its Bleak/HA proxy transport. A second
+charger entry is blocked so commands cannot be routed to the wrong device.
 
 ### Bluetooth and phone access
 
@@ -42,6 +79,42 @@ The charger accepts one BLE client. **Companion app mode** pauses HA polling and
 releases BLE for the SkyRC app; switch it off to return control to HA. It does
 not stop an ordinary charger program. An integration-managed battery test is
 paused and its stop is verified before releasing Bluetooth.
+
+## Dashboard
+
+Copy `www/mc3000-*-card.js` to `/config/www/mc3000/` and register these JavaScript
+modules under **Settings → Dashboards → Resources**:
+
+```text
+/local/mc3000/mc3000-programs-card.js?v=1
+/local/mc3000/mc3000-batteries-card.js?v=1
+/local/mc3000/mc3000-curve-card.js?v=1
+```
+
+Increment the URL version on update and reload the browser. Modules are
+self-contained, without CDN imports. Backend installation alone does not copy
+or register the frontend resources.
+
+Start with the [advanced dashboard example](examples/skyrc-mc3000-advanced-dashboard.yaml):
+four slot columns, program editor, settings, optional battery tools and a curve
+subview for each slot. Create dashboard URL path `dashboard-mc3000` or adjust its navigation.
+Check your actual entity IDs before using the example.
+
+```yaml
+type: custom:mc3000-programs-card
+mode: editor
+# language: en  # Optional en/uk override; otherwise follows HA, falling back to English.
+```
+
+For a compact selector, replace `mode: editor` with `slot: 1`. Programs and
+batteries accept `entity`, `companion_entity` and a four-element `status_entities`
+array for renamed entities. Programs also accept `editor_path`. Curves accept
+`slot`, `entity`, `fetch_entity` and `companion_entity`. Default IDs use the
+standard `skyrc_mc3000` prefix.
+
+The advanced example uses native HA cards and these three modules, with no other
+custom-card dependencies. The [original chart example](examples/skyrc-mc3000-dashboard.yaml)
+remains available and requires ApexCharts Card.
 
 ## Monitoring and controls
 
@@ -91,6 +164,16 @@ Android named profiles are stored on the phone. This integration does not read
 that database or enumerate the charger's 30 internal program memories. Enter
 profiles in HA; a physical-cell catalogue record is not required.
 
+<details>
+<summary>Preview the program editor</summary>
+
+![Program editor with saved profiles, electrical limits and slot selection](docs/images/program-editor.png)
+
+*Illustrative data. Saving changes the HA library; applying sends parameters;
+starting a slot is a separate action.*
+
+</details>
+
 ### Actions
 
 | `skyrc_mc3000` action | Purpose |
@@ -107,7 +190,10 @@ support response data. API units: main currents **A**, voltages **mV**,
 termination/trickle currents **mA**, rest/protection times **minutes**. The card
 displays voltages in V and converts them for the API.
 
-Example complete upload; adjust all limits for the actual cell:
+<details>
+<summary>Complete program-upload example</summary>
+
+Adjust every limit for the actual cell. Uploading does not start the slot.
 
 ```yaml
 action: skyrc_mc3000.write_program
@@ -132,6 +218,8 @@ data:
   protection_time: 240
   discharge_time: 0
 ```
+
+</details>
 
 ## Device settings and curves
 
@@ -183,40 +271,6 @@ Actions: `save_cell`, `delete_cell`, `assign_cell`, `start_quality_test`,
 `pause_quality_test`, `resume_quality_test`, `cancel_quality_test`,
 `export_quality_report`.
 
-## Optional dashboard cards
-
-Copy `www/mc3000-*-card.js` to `/config/www/mc3000/` and register these JavaScript
-modules under **Settings → Dashboards → Resources**:
-
-```text
-/local/mc3000/mc3000-programs-card.js?v=1
-/local/mc3000/mc3000-batteries-card.js?v=1
-/local/mc3000/mc3000-curve-card.js?v=1
-```
-
-Increment the URL version on update and reload the browser. Modules are
-self-contained, without CDN imports. Backend installation alone does not copy
-or register the frontend resources.
-
-Use `examples/skyrc-mc3000-advanced-dashboard.yaml` as a four-column starting
-point. Create dashboard URL path `dashboard-mc3000` or adjust its navigation.
-Check your actual entity IDs before using the example.
-
-```yaml
-type: custom:mc3000-programs-card
-mode: editor
-# language: en  # Optional en/uk override; otherwise follows HA, falling back to English.
-```
-
-For a compact selector, replace `mode: editor` with `slot: 1`. Programs and
-batteries accept `entity`, `companion_entity` and a four-element `status_entities`
-array for renamed entities. Programs also accept `editor_path`. Curves accept
-`slot`, `entity`, `fetch_entity` and `companion_entity`. Default IDs use the
-standard `skyrc_mc3000` prefix.
-
-The original ApexCharts example is retained and requires ApexCharts Card. The
-advanced example uses native HA cards and the three modules above.
-
 ## Validation and limitations
 
 Real-device checks used **firmware 1.18 / hardware 2.2** and four 4.20 V Li-ion
@@ -267,6 +321,9 @@ No APK or decompiled application source is distributed here. See
 [the command and capability audit](docs/PROTOCOL.md) for byte-level coverage,
 unconfirmed fields and the distinction between BLE features and ESP32 workflows.
 
-## License
+## Credits
 
-MIT, following the upstream repository.
+Based on [jperquin/ha-skyrc-mc3000](https://github.com/jperquin/ha-skyrc-mc3000)
+and [jperquin/skyrc-ble](https://github.com/jperquin/skyrc-ble). The protocol work
+also benefits from the independent implementations linked above. This is a
+community integration, not an official SkyRC product.
