@@ -16,6 +16,7 @@ CHEMISTRY_OPTIONS = [
     "eneloop",
     "ram",
     "batlto",
+    "naion",
 ]
 
 
@@ -23,11 +24,13 @@ async def async_setup_entry(hass, entry, async_add_entities):
     """Set up SkyRC MC3000 chemistry policy selects."""
     address = entry.data[CONF_ADDRESS]
     entities = [
-        SkyrcMc3000ChemistrySelect(slot_index, address)
-        for slot_index in range(4)
+        SkyrcMc3000ChemistrySelect(slot_index, address) for slot_index in range(4)
     ]
 
     async_add_entities(entities)
+    from .settings import setup_selects
+
+    await setup_selects(hass, entry, async_add_entities)
 
 
 class SkyrcMc3000ChemistrySelect(SelectEntity, RestoreEntity):
@@ -43,7 +46,9 @@ class SkyrcMc3000ChemistrySelect(SelectEntity, RestoreEntity):
         self.address = address
 
         self._attr_name = f"SkyRC MC3000 Slot {self.slot} Expected Chemistry"
-        self._attr_unique_id = f"skyrc_mc3000_{address}_slot_{self.slot}_expected_chemistry"
+        self._attr_unique_id = (
+            f"skyrc_mc3000_{address}_slot_{self.slot}_expected_chemistry"
+        )
         self._attr_suggested_object_id = (
             f"skyrc_mc3000_slot_{self.slot}_expected_chemistry"
         )

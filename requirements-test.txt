@@ -1,0 +1,11 @@
+# Run from the repository root in a Python 3.12+ virtual environment:
+# python -m pip install -r requirements-test.txt
+# python -m pytest
+# Tests use fake Home Assistant and GATT endpoints; no HA installation or
+# Bluetooth hardware is needed. Use the same upstream transport as manifest.json.
+skyrc-ble @ https://github.com/jperquin/skyrc-ble/archive/refs/tags/v3.0.0.zip#sha256=680f2c19fc54f8a4b0d9d295f5c9027cba4f9acde8f55794ddb604dc8a371641
+bleak==3.1.0
+bleak-retry-connector==4.7.1
+voluptuous==0.16.0
+pytest==9.2.0
+pytest-asyncio==1.5.0

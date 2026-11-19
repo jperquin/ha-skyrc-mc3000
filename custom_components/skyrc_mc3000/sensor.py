@@ -34,6 +34,8 @@ def _enum_value(value: Any) -> Any:
         return None
     if hasattr(value, "name"):
         return value.name.lower()
+    if type(value) is int:
+        return f"unknown_{value}"
     return value
 
 
@@ -43,9 +45,36 @@ def _basic_value(data: dict[str, Any], attr: str) -> Any:
     return getattr(basic_data, attr, None)
 
 
+DISPLAY_OPTIONS = (
+    "off",
+    "auto",
+    "one_minute",
+    "three_minutes",
+    "five_minutes",
+    "always_on",
+)
+
+
+def _display_mode_value(data: dict[str, Any]) -> str | None:
+    """Use the Android display indices; the library misnames index 3 as 2 min."""
+    value = _basic_value(data, "display")
+    if value is None:
+        return None
+    code = int(value)
+    return (
+        DISPLAY_OPTIONS[code] if 0 <= code < len(DISPLAY_OPTIONS) else f"unknown_{code}"
+    )
+
+
 def _channel_value(channel: Any, attr: str) -> Any:
     """Read an attribute from a channel object."""
     return getattr(channel, attr, None)
+
+
+def _resistance_value(channel: Any) -> Any:
+    """Hide the N/A sentinels used by Android BatteryInfo.setInternal()."""
+    value = _channel_value(channel, "resistance")
+    return None if value in (0, 1, 65535) else value
 
 
 def _format_seconds(value: Any) -> str | None:
@@ -70,7 +99,7 @@ def _format_seconds(value: Any) -> str | None:
 DEVICE_SENSORS: tuple[SkyrcSensorDescription, ...] = (
     SkyrcSensorDescription(
         key="input_voltage",
-        name="Input Voltage",
+        name="Input voltage cutoff",
         native_unit_of_measurement=UnitOfElectricPotential.VOLT,
         device_class=SensorDeviceClass.VOLTAGE,
         state_class=SensorStateClass.MEASUREMENT,
@@ -86,7 +115,7 @@ DEVICE_SENSORS: tuple[SkyrcSensorDescription, ...] = (
         key="display_mode",
         name="Display Mode",
         icon="mdi:monitor",
-        value_fn=lambda data: _enum_value(_basic_value(data, "display")),
+        value_fn=_display_mode_value,
     ),
     SkyrcSensorDescription(
         key="cooling_fan_mode",
@@ -166,13 +195,37 @@ CHANNEL_SENSORS: tuple[SkyrcSensorDescription, ...] = (
         native_unit_of_measurement="mΩ",
         state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:omega",
-        value_fn=lambda ch: _channel_value(ch, "resistance"),
+        value_fn=_resistance_value,
     ),
     SkyrcSensorDescription(
         key="time",
         name="Elapsed Time",
         icon="mdi:timer-outline",
         value_fn=lambda ch: _format_seconds(_channel_value(ch, "time")),
+    ),
+)
+
+
+CHANNEL_SENSORS += (
+    SkyrcSensorDescription(
+        key="cycle_count",
+        name="Cycle counter",
+        icon="mdi:repeat",
+        value_fn=lambda channel: channel.count,
+    ),
+    SkyrcSensorDescription(
+        key="led",
+        name="Slot indicator",
+        icon="mdi:led-on",
+        value_fn=lambda channel: _enum_value(channel.led),
+    ),
+    SkyrcSensorDescription(
+        key="power",
+        name="Power",
+        native_unit_of_measurement="W",
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda channel: round(channel.voltage * channel.current, 3),
     ),
 )
 
@@ -194,7 +247,14 @@ async def async_setup_entry(hass, entry, async_add_entities):
             for description in CHANNEL_SENSORS
         )
         entities.append(SkyrcMc3000VoltageCurveSensor(coordinator, slot_index))
+        entities.extend(
+            SkyrcMc3000PhaseCapacitySensor(coordinator, slot_index, direction)
+            for direction in ("charge", "discharge")
+        )
 
+    entities.append(SkyrcMc3000ProgramsSensor(coordinator))
+    entities.append(SkyrcMc3000BatteriesSensor(coordinator))
+    entities.append(SkyrcMc3000ConnectionSensor(coordinator))
     async_add_entities(entities)
 
 
@@ -203,12 +263,16 @@ class SkyrcMc3000BaseSensor(CoordinatorEntity, SensorEntity):
 
     _attr_has_entity_name = False
 
-    def __init__(self, coordinator, description: SkyrcSensorDescription | None = None) -> None:
+    def __init__(
+        self, coordinator, description: SkyrcSensorDescription | None = None
+    ) -> None:
         super().__init__(coordinator)
 
         if description is not None:
             self.entity_description_custom = description
-            self._attr_native_unit_of_measurement = description.native_unit_of_measurement
+            self._attr_native_unit_of_measurement = (
+                description.native_unit_of_measurement
+            )
             self._attr_device_class = description.device_class
             self._attr_state_class = description.state_class
             self._attr_icon = description.icon
@@ -220,7 +284,9 @@ class SkyrcMc3000BaseSensor(CoordinatorEntity, SensorEntity):
     @property
     def device_info(self):
         """Return device info for the SkyRC MC3000."""
-        charger = self.coordinator.data.get("charger", {}) if self.coordinator.data else {}
+        charger = (
+            self.coordinator.data.get("charger", {}) if self.coordinator.data else {}
+        )
 
         address = (
             getattr(self.coordinator, "address", None)
@@ -254,7 +320,15 @@ class SkyrcMc3000DeviceSensor(SkyrcMc3000BaseSensor):
 
     def __init__(self, coordinator, description: SkyrcSensorDescription) -> None:
         super().__init__(coordinator, description)
-        self._attr_name = description.name
+        if description.key in {"input_voltage", "display_mode"}:
+            self._attr_has_entity_name = True
+            self._attr_translation_key = (
+                "input_voltage_cutoff"
+                if description.key == "input_voltage"
+                else "display_mode"
+            )
+        else:
+            self._attr_name = description.name
         self._attr_unique_id = f"skyrc_mc3000_{description.key}"
 
     @property
@@ -268,14 +342,37 @@ class SkyrcMc3000DeviceSensor(SkyrcMc3000BaseSensor):
 
         return self.entity_description_custom.value_fn(self.coordinator.data)
 
+    @property
+    def extra_state_attributes(self):
+        if (
+            self.entity_description_custom.key != "display_mode"
+            or not self.coordinator.data
+        ):
+            return {}
+        value = _basic_value(self.coordinator.data, "display")
+        return {
+            "raw_display_code": int(value) if value is not None else None,
+            "raw_library_state": _enum_value(value),
+        }
+
 
 class SkyrcMc3000ChannelSensor(SkyrcMc3000BaseSensor):
     """Channel-level SkyRC MC3000 sensor."""
 
-    def __init__(self, coordinator, slot_index: int, description: SkyrcSensorDescription) -> None:
+    def __init__(
+        self, coordinator, slot_index: int, description: SkyrcSensorDescription
+    ) -> None:
         super().__init__(coordinator, description)
         self.slot_index = slot_index
-        self._attr_name = f"Slot {slot_index + 1} {description.name}"
+        if description.key in {"cycle_count", "led", "power"}:
+            self._attr_has_entity_name = True
+            self._attr_translation_key = f"slot_{description.key}"
+            self._attr_translation_placeholders = {"slot": str(slot_index + 1)}
+            if description.key == "led":
+                self._attr_device_class = SensorDeviceClass.ENUM
+                self._attr_options = ["off", "red", "green"]
+        else:
+            self._attr_name = f"Slot {slot_index + 1} {description.name}"
         self._attr_unique_id = f"skyrc_mc3000_slot_{slot_index + 1}_{description.key}"
 
     @property
@@ -297,6 +394,72 @@ class SkyrcMc3000ChannelSensor(SkyrcMc3000BaseSensor):
 
         return self.entity_description_custom.value_fn(channel)
 
+    @property
+    def extra_state_attributes(self):
+        channels = (self.coordinator.data or {}).get("channels") or []
+        if self.slot_index >= len(channels) or channels[self.slot_index] is None:
+            return {}
+        channel = channels[self.slot_index]
+        return {
+            key: int(value) if isinstance(value, int) else None
+            for key, value in (
+                ("chemistry_code", getattr(channel, "type", None)),
+                ("mode_code", getattr(channel, "mode", None)),
+                ("status_code", getattr(channel, "status", None)),
+            )
+        }
+
+
+class SkyrcMc3000PhaseCapacitySensor(SkyrcMc3000BaseSensor):
+    """Last observed capacity in the latest recognized charge/discharge phase."""
+
+    _attr_has_entity_name = True
+    _attr_native_unit_of_measurement = "mAh"
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _unrecorded_attributes = frozenset({"phase_details"})
+
+    def __init__(self, coordinator, slot_index: int, direction: str):
+        super().__init__(coordinator)
+        self.slot_index = slot_index
+        self.direction = direction
+        self.key = (
+            "charged_capacity" if direction == "charge" else "discharged_capacity"
+        )
+        self._attr_translation_key = f"slot_{self.key}"
+        self._attr_translation_placeholders = {"slot": str(slot_index + 1)}
+        self._attr_icon = (
+            "mdi:battery-plus" if direction == "charge" else "mdi:battery-minus"
+        )
+        self._attr_unique_id = (
+            f"skyrc_mc3000_{coordinator.address}_slot_{slot_index + 1}_{self.key}"
+        )
+        self._attr_suggested_object_id = (
+            f"skyrc_mc3000_slot_{slot_index + 1}_{self.key}"
+        )
+
+    def _snapshot(self):
+        telemetry = getattr(self.coordinator, "telemetry", None)
+        return telemetry.snapshot(self.slot_index + 1) if telemetry else {}
+
+    @property
+    def native_value(self):
+        return self._snapshot().get(self.key)
+
+    @property
+    def extra_state_attributes(self):
+        snapshot = self._snapshot()
+        return {
+            "value_scope": "latest_observed_phase",
+            "is_final_result": False,
+            "direction": self.direction,
+            "current_phase": snapshot.get("current_phase"),
+            "observation_run": snapshot.get("observation_run"),
+            "reset_reason": snapshot.get("reset_reason"),
+            "continuity": snapshot.get("continuity"),
+            "peak_capacity_mah": snapshot.get(f"{self.key}_peak"),
+            "phase_details": snapshot.get(self.direction),
+        }
+
 
 class SkyrcMc3000VoltageCurveSensor(CoordinatorEntity, SensorEntity):
     """Voltage curve diagnostic sensor."""
@@ -309,9 +472,7 @@ class SkyrcMc3000VoltageCurveSensor(CoordinatorEntity, SensorEntity):
         super().__init__(coordinator)
         self.slot_index = slot_index
         self._attr_name = f"Slot {slot_index + 1} Voltage Curve Points"
-        self._attr_unique_id = (
-            f"skyrc_mc3000_{coordinator.address}_slot_{slot_index + 1}_voltage_curve_points"
-        )
+        self._attr_unique_id = f"skyrc_mc3000_{coordinator.address}_slot_{slot_index + 1}_voltage_curve_points"
 
     @property
     def native_value(self):
@@ -349,7 +510,9 @@ class SkyrcMc3000VoltageCurveSensor(CoordinatorEntity, SensorEntity):
     @property
     def device_info(self):
         """Return device info."""
-        charger = self.coordinator.data.get("charger", {}) if self.coordinator.data else {}
+        charger = (
+            self.coordinator.data.get("charger", {}) if self.coordinator.data else {}
+        )
 
         address = (
             getattr(self.coordinator, "address", None)
@@ -371,3 +534,108 @@ class SkyrcMc3000VoltageCurveSensor(CoordinatorEntity, SensorEntity):
             device_info["hw_version"] = str(charger.get("hw_version"))
 
         return device_info
+
+
+class SkyrcMc3000ProgramsSensor(SkyrcMc3000BaseSensor):
+    """Persistent profile library, available even while BLE is disconnected."""
+
+    _attr_has_entity_name = True
+    _attr_translation_key = "programs"
+    _attr_icon = "mdi:playlist-edit"
+    _attr_suggested_object_id = "skyrc_mc3000_programs"
+    _unrecorded_attributes = frozenset(
+        {"profiles", "selected", "applied", "constraints"}
+    )
+
+    def __init__(self, coordinator):
+        super().__init__(coordinator)
+        self._attr_unique_id = f"skyrc_mc3000_{coordinator.address}_programs"
+
+    async def async_added_to_hass(self):
+        await super().async_added_to_hass()
+        self.coordinator.programs.listeners.add(self.async_write_ha_state)
+        self.async_on_remove(
+            lambda: self.coordinator.programs.listeners.discard(
+                self.async_write_ha_state
+            )
+        )
+
+    @property
+    def available(self):
+        return True
+
+    @property
+    def native_value(self):
+        return len(self.coordinator.programs.profiles)
+
+    @property
+    def extra_state_attributes(self):
+        return self.coordinator.programs.snapshot()
+
+
+class SkyrcMc3000ConnectionSensor(SkyrcMc3000BaseSensor):
+    _attr_has_entity_name = True
+    _attr_translation_key = "connection"
+    _attr_device_class = SensorDeviceClass.ENUM
+    _attr_options = ["companion_app", "connected", "disconnected"]
+    _attr_icon = "mdi:bluetooth-connect"
+    _attr_suggested_object_id = "skyrc_mc3000_connection"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def __init__(self, coordinator):
+        super().__init__(coordinator)
+        self._attr_unique_id = f"skyrc_mc3000_{coordinator.address}_connection"
+
+    @property
+    def available(self):
+        return True
+
+    @property
+    def native_value(self):
+        if self.coordinator.pause_polling:
+            return "companion_app"
+        data = self.coordinator.data or {}
+        return (
+            "connected"
+            if data.get("connection", {}).get("connected")
+            and self.coordinator.last_update_success
+            else "disconnected"
+        )
+
+    @property
+    def extra_state_attributes(self):
+        data = self.coordinator.data or {}
+        return {**data.get("connection", {}), **data.get("charger", {})}
+
+
+class SkyrcMc3000BatteriesSensor(SkyrcMc3000BaseSensor):
+    _attr_has_entity_name = True
+    _attr_translation_key = "batteries"
+    _attr_icon = "mdi:battery-heart-variant"
+    _attr_suggested_object_id = "skyrc_mc3000_batteries"
+    _unrecorded_attributes = frozenset({"cells", "assignments", "jobs", "reports"})
+
+    def __init__(self, coordinator):
+        super().__init__(coordinator)
+        self._attr_unique_id = f"skyrc_mc3000_{coordinator.address}_batteries"
+
+    async def async_added_to_hass(self):
+        await super().async_added_to_hass()
+        self.coordinator.quality.listeners.add(self.async_write_ha_state)
+        self.async_on_remove(
+            lambda: self.coordinator.quality.listeners.discard(
+                self.async_write_ha_state
+            )
+        )
+
+    @property
+    def available(self):
+        return True
+
+    @property
+    def native_value(self):
+        return len(self.coordinator.quality.cells)
+
+    @property
+    def extra_state_attributes(self):
+        return self.coordinator.quality.snapshot()

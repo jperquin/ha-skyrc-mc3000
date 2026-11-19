@@ -9,6 +9,9 @@ from .const import DOMAIN
 async def async_setup_entry(hass, entry, async_add_entities):
     """Set up SkyRC MC3000 switches."""
     coordinator = hass.data[DOMAIN]["coordinator"]
+    from .settings import setup_switches
+
+    await setup_switches(hass, entry, async_add_entities)
 
     async_add_entities(
         [

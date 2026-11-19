@@ -1,560 +1,272 @@
-# SkyRC MC3000 Home Assistant Integration
+# SkyRC MC3000 for Home Assistant
 
-Custom Home Assistant integration for the SkyRC MC3000 charger.
+Local Bluetooth monitoring and control for the four-slot SkyRC MC3000 charger.
+Uses Home Assistant's Bluetooth manager with a local adapter or ESPHome Bluetooth
+proxy. No dedicated MC3000 ESP32 firmware is required.
 
-This integration exposes MC3000 charger status, slot data, start/stop controls, Companion App Mode, and voltage curve data in Home Assistant.
-
-Current release track:
-
-    v1.1.0
-
-This release adds:
-
-- Home Assistant Bluetooth API support
-- ESPHome Bluetooth Proxy support
-- manual voltage curve fetching
-- automatic voltage curve fetching for active slots
-- voltage curve timing metadata
-- an ApexCharts dashboard example
-- Companion App Mode to release the BLE connection for the SkyRC companion app
-- quiet recovery from transient BLE disconnects and response timeouts
-- safe, explicit upload of complete MC3000 work programs
-- a chemistry-checked Start all dashboard control
-
-Recoverable BLE disconnects keep the last known sensor data and reconnect on
-the next poll. They are logged at debug level. Initial connection failures and
-failures without usable cached data remain visible through Home Assistant's
-coordinator error reporting.
-
----
-
-## Status
-
-This integration is functional but still under active development.
-
-The current implementation can:
-
-- discover/connect through Home Assistant Bluetooth
-- use ESPHome Bluetooth Proxy
-- poll MC3000 status
-- expose charger and slot sensors
-- start/stop slots using the program already configured on the charger
-- fetch voltage curves manually
-- auto-fetch voltage curves for active slots
-- display voltage curves in Lovelace through ApexCharts
-
-Complete charger profiles can be uploaded through the `write_program` service.
-The service requires every safety-critical setting and never starts a slot
-automatically.
-
----
-
-## Requirements
-
-- Home Assistant
-- SkyRC MC3000 with Bluetooth enabled
-- Bluetooth access through one of:
-  - local Home Assistant Bluetooth adapter
-  - ESPHome Bluetooth Proxy
-
-Python dependency:
-
-    skyrc-ble @ https://github.com/jperquin/skyrc-ble/archive/refs/tags/v3.0.0.zip
-
-MC3000 voltage-curve parsing and complete program writes are provided by the
-immutable `skyrc-ble` v3.0.0 GitHub release tag.
-
----
-
-## Bluetooth support
-
-The integration uses Home Assistant's Bluetooth manager first.
-
-That means the MC3000 can be reached through:
-
-    Home Assistant Bluetooth API
-    -> local Bluetooth adapter or ESPHome Bluetooth Proxy
-    -> SkyRC MC3000
-
-Direct Bleak scanning remains available as a fallback for local BlueZ adapters.
-
-This is important for HAOS/VM/container setups where the charger is not reachable by a directly attached Bluetooth adapter but is visible through an ESPHome Bluetooth Proxy.
-
----
-
-## ESPHome Bluetooth Proxy
-
-A minimal ESPHome Bluetooth Proxy configuration:
-
-    esphome:
-      name: skyrc-bt-proxy
-      friendly_name: SkyRC BT Proxy
-
-    esp32:
-      board: esp32dev
-      framework:
-        type: esp-idf
-
-    logger:
-
-    api:
-
-    ota:
-      - platform: esphome
-
-    wifi:
-      ssid: !secret wifi_ssid
-      password: !secret wifi_password
-
-    esp32_ble_tracker:
-      scan_parameters:
-        interval: 1100ms
-        window: 1100ms
-        active: true
-
-    bluetooth_proxy:
-      active: true
-      cache_services: true
-
-After the ESPHome device is online, add it to Home Assistant through the ESPHome integration. Home Assistant should then expose it as a Bluetooth source.
-
-The MC3000 typically advertises as:
-
-    name: Charger
-    service UUID: 0000ffe0-0000-1000-8000-00805f9b34fb
-
----
+This development version extends upstream v1.1.0 with saved programs, optional
+dashboard cards, device settings, corrected voltage curves and optional battery
+workflows. English is the default; new cards, settings and actions also include
+Ukrainian translations.
 
 ## Installation
 
-Copy the integration to:
-
-    /config/custom_components/skyrc_mc3000
-
-Then restart Home Assistant.
-
-Add the integration through:
-
-    Settings -> Devices & services -> Add integration -> SkyRC MC3000
-
-If Bluetooth discovery is working, the MC3000 should appear as a discovered device.
-
-Manual setup is also possible by entering the MC3000 Bluetooth MAC address.
-
----
-
-## Entities
-
-### Device-level sensors
-
-The integration exposes charger-level data such as:
-
-- input voltage
-- temperature unit
-- display mode
-- cooling fan mode
-- system beep
-- screensaver
-
-Example entity IDs may include:
-
-    sensor.input_voltage
-    sensor.skyrc_mc3000_temperature_unit
-    sensor.skyrc_mc3000_display_mode
-    sensor.skyrc_mc3000_cooling_fan_mode
-    sensor.skyrc_mc3000_system_beep
-    sensor.skyrc_mc3000_screensaver
-
-Entity IDs can differ if Home Assistant already had older entities registered. Check your entity registry if in doubt.
-
-### Slot sensors
-
-For each of the four slots:
-
-- status
-- battery type
-- mode
-- voltage
-- current
-- capacity
-- temperature
-- internal resistance
-- elapsed time
-
-Typical entity IDs:
-
-    sensor.skyrc_mc3000_slot_1_status
-    sensor.skyrc_mc3000_slot_1_battery_type
-    sensor.skyrc_mc3000_slot_1_mode
-    sensor.skyrc_mc3000_slot_1_voltage
-    sensor.skyrc_mc3000_slot_1_current
-    sensor.skyrc_mc3000_slot_1_capacity
-    sensor.skyrc_mc3000_slot_1_temperature
-    sensor.skyrc_mc3000_slot_1_internal_resistance
-    sensor.skyrc_mc3000_slot_1_elapsed_time
-
-Repeat for slots 2, 3, and 4.
-
-Voltage sensors use suggested display precision of 3 decimals.
-
-Elapsed time is formatted as:
-
-    H:MM:SS
-
-### Buttons
-
-The integration exposes buttons for:
-
-- refresh charger state
-- start all slots, with the per-slot Expected Chemistry checks
-- stop all slots
-- start slot 1-4
-- stop slot 1-4
-- fetch voltage curve slot 1-4
-
-Typical entity IDs:
-
-    button.skyrc_mc3000_refresh
-    button.skyrc_mc3000_start_all
-    button.skyrc_mc3000_stop_all
-    button.skyrc_mc3000_slot_1_start
-    button.skyrc_mc3000_slot_1_stop
-    button.skyrc_mc3000_slot_1_fetch_voltage_curve
-
-Repeat for slots 2, 3, and 4.
-
-The start buttons start the program already configured on the MC3000 for that slot.
-They do not program charge parameters.
-
-Use the `skyrc_mc3000.write_program` service to upload a complete program first.
-The charger protocol cannot change only the battery chemistry: every upload also
-contains the currents, voltage limits and protection values. The write service
-therefore requires all safety-critical fields and never starts the program
-automatically.
-
-The existing Expected Chemistry selects remain a start-time safety policy. They
-do not write to the charger.
-
-### Switches
-
-The integration exposes:
-
-    switch.skyrc_mc3000_companion_app_mode
-    switch.skyrc_mc3000_auto_fetch_voltage_curves
-
----
-
-## Companion App Mode
-
-The MC3000 BLE connection is effectively single-client.
-
-Companion App Mode:
-
-- pauses Home Assistant polling
-- disconnects BLE
-- allows the SkyRC companion app to connect
-
-Turn Companion App Mode off to resume Home Assistant polling.
-
-Use this when you want to modify charger programs or settings through the official SkyRC app.
-
----
-
-## Auto Fetch Voltage Curves
-
-Voltage curves are not fetched continuously by default.
-
-You can fetch them manually with the per-slot fetch buttons, or enable:
-
-    switch.skyrc_mc3000_auto_fetch_voltage_curves
-
-When enabled, the integration:
-
-- fetches voltage curves only for active slots
-- considers a slot active when current is above 0.001 A
-- throttles curve fetching to avoid excessive BLE traffic
-- updates the voltage curve sensors and attributes
-
-This avoids constant 0x56 curve polling while still keeping active charge curves reasonably fresh.
-
----
-
-## Voltage curve support
-
-The MC3000 voltage curve command is read-only.
-
-The integration exposes one diagnostic sensor per slot:
-
-    sensor.skyrc_mc3000_slot_1_voltage_curve_points
-    sensor.skyrc_mc3000_slot_2_voltage_curve_points
-    sensor.skyrc_mc3000_slot_3_voltage_curve_points
-    sensor.skyrc_mc3000_slot_4_voltage_curve_points
-
-The sensor state is the number of non-zero voltage samples.
-
-The curve itself is stored in attributes:
-
-    sample_count: 120
-    nonzero_sample_count: 70
-    min_nonzero_mv: 1458
-    max_nonzero_mv: 1547
-    interval_seconds: 1
-    unknown_3: 0
-    checksum_ok: true
-    plot_until_index: 69
-    plot_reason: last_nonzero_sample
-    samples_mv:
-      - 1458
-      - 1458
-      - 1478
-    samples_v:
-      - 1.458
-      - 1.458
-      - 1.478
-    last_fetched: "2026-04-28T12:42:25"
-
-The voltage curve frame has been observed as:
-
-    total frame length: 246 bytes
-    byte 0:       0x0f magic
-    byte 1:       0x56 command
-    byte 2:       channel index 0..3
-    byte 3:       unknown, observed 0
-    byte 4:       seconds per sample
-    byte 5-244:   120 samples, uint16 big-endian, millivolts
-    byte 245:     checksum = sum(frame[0:245]) & 0xff
-
-Observed interval_seconds values:
-
-    1, 2, 4, 8
-
-The charger appears to downsample longer curves by increasing the seconds-per-sample interval.
-
----
-
-## Dashboard
-
-An example dashboard is included:
-
-    examples/skyrc-mc3000-dashboard.yaml
-
-The dashboard uses ApexCharts Card to plot voltage curves.
-
----
-
-## Installing ApexCharts Card without HACS
-
-Download the card JavaScript file:
-
-    mkdir -p /config/www
-
-    wget -O /config/www/apexcharts-card.js \
-      https://github.com/RomRider/apexcharts-card/releases/latest/download/apexcharts-card.js
-
-Add the Lovelace resource:
-
-    url: /local/apexcharts-card.js
-    type: module
-
-In the Home Assistant UI this is usually under:
-
-    Settings -> Dashboards -> Resources
-
-If you use YAML Lovelace configuration, merge the resource into your Lovelace configuration.
-
----
-
-## Example dashboard setup
-
-A minimal YAML dashboard registration in configuration.yaml:
-
-    lovelace:
-      mode: storage
-      resources:
-        - url: /local/apexcharts-card.js
-          type: module
-      dashboards:
-        skyrc-test:
-          mode: yaml
-          title: SkyRC Test
-          icon: mdi:battery-charging
-          show_in_sidebar: true
-          filename: skyrc-test.yaml
-
-Then copy the example dashboard to:
-
-    /config/skyrc-test.yaml
-
-or use the included example as a starting point:
-
-    examples/skyrc-mc3000-dashboard.yaml
-
----
-
-## Dashboard notes
-
-The curve chart uses:
-
-    sample index * interval_seconds
-
-to build the X-axis. This is more accurate than projecting all curves over a fixed time window.
-
-The chart filters out zero samples so empty tail values do not pull the graph down to 0 V.
-
----
-
-## Writing programs
-
-The `skyrc_mc3000.write_program` service uploads a complete program to one slot.
-It implements the official two-frame `0x11` protocol:
-
-- slot selection is a bitmask
-- each frame is 20 bytes
-- the delay between frames is 50 milliseconds
-- the final checksum is cumulative over both frames
-- the MC3000 must acknowledge the upload before the service succeeds
-
-Example using the official app's saved `NiMH Charge` values:
+In Home Assistant **Marketplace** (or HACS on older HA versions), add this
+repository's GitHub URL as a custom **Integration** repository and install it.
+Use the default branch for this development preview, then restart HA. Only one
+repository may own the `skyrc_mc3000` directory at a time; installing a fork over
+an already managed upstream installation may require migrating the store entry.
+Do not delete your existing device setup merely to switch update sources.
+
+For a manual installation:
+
+Copy `custom_components/skyrc_mc3000` into your HA configuration directory,
+restart Home Assistant, then add **SkyRC MC3000** in **Settings → Devices &
+services**. Select the charger or enter its Bluetooth address. Preserve the
+existing config entry and entity registry when upgrading.
+
+The integration supports **one charger per HA instance**. Services target that
+charger; a second config entry is blocked rather than routing commands to the
+wrong device. The Python dependency remains pinned to `skyrc-ble` v3.0.0; a local
+adapter extends packet handling while retaining its Bleak/HA proxy transport.
+
+### Bluetooth and phone access
+
+Add an ESPHome Bluetooth proxy to HA through the normal ESPHome integration and
+place it within reliable Bluetooth range. The MC3000 commonly advertises as
+`Charger`, `SimpleBLEPeripheral`, or `HitecCharger` with service UUID
+`0000ffe0-0000-1000-8000-00805f9b34fb`. Other products share this UUID, so verify
+the selected device's address.
+
+The charger accepts one BLE client. **Companion app mode** pauses HA polling and
+releases BLE for the SkyRC app; switch it off to return control to HA. It does
+not stop an ordinary charger program. An integration-managed battery test is
+paused and its stop is verified before releasing Bluetooth.
+
+## Monitoring and controls
+
+Each slot exposes status, chemistry, mode, voltage, current, capacity,
+temperature, internal resistance, elapsed time, power, a cycle counter and LED
+state. Connection diagnostics include the last successful update, stale-data
+flag and firmware/hardware versions. The device's unavailable resistance markers
+are exposed as unknown, not as a zero-ohm reading. Unknown firmware enum values
+retain their numeric codes for diagnostics and block unsafe control.
+
+Separate charge/discharge capacity sensors retain the latest observed value of
+each phase through subsequent phases and HA restarts. They are observations,
+not a sum of cycles or a guaranteed final capacity measurement; attributes mark
+continuity gaps and resets.
+
+`input_voltage` is the **input-voltage cutoff setting**, not measured adapter
+voltage. Temperature telemetry is normalized to °C even when the charger displays °F.
+
+Buttons provide refresh, per-slot/all-slot start and stop, and curve retrieval.
+Start checks **Expected chemistry**, resolved through the entity registry so
+renaming a select cannot bypass it. Missing/unavailable policies block control;
+select `any` explicitly to opt out. This checks the configured program, not the
+physical cell chemistry.
+
+Physical commands are serialized. Group start preflights every slot; failure
+attempts to stop the started group. Group stop sends and verifies individual
+slot commands. BLE loss cannot guarantee physical stop: the charger may continue
+its own program until communication returns.
+
+## Saved programs
+
+The **MC3000 Programs** card edits all program fields: chemistry/mode, charge and
+discharge currents/voltages, capacity limit, termination currents, temperature
+and time protection, cycle order/count, rest periods, delta peak, trickle and
+restart voltage. Programs are stored in HA and survive restart.
+
+**Save**, **select**, **apply**, and **start** are separate operations. Apply
+uploads a complete program to selected idle slots and never starts it. After
+start, chemistry, mode and status are checked against an upload receipt when
+that receipt remains valid for the current connection.
+
+Validation covers Li-ion, LiFePO₄, 4.35 V Li-ion, NiMH, NiCd, Eneloop, NiZn, RAM,
+LTO and Na-ion, with chemistry-specific modes and break-in currents derived from
+nominal capacity. A valid packet does not establish support on every firmware.
+
+Android named profiles are stored on the phone. This integration does not read
+that database or enumerate the charger's 30 internal program memories. Enter
+profiles in HA; a physical-cell catalogue record is not required.
+
+### Actions
+
+| `skyrc_mc3000` action | Purpose |
+| --- | --- |
+| `save_profile`, `delete_profile` | Persistent named programs |
+| `select_profile` | Remember a profile for one slot |
+| `apply_profile` | Upload to `slot` or `slots`; optional `validate_only` |
+| `write_program` | Upload one complete program directly |
+| `start_slot`, `stop_slot` | Control one slot numbered 1–4 |
+| `start_all`, `stop_all`, `refresh` | Device controls |
+
+See the HA action selector for every field. `save_profile` and `apply_profile`
+support response data. API units: main currents **A**, voltages **mV**,
+termination/trickle currents **mA**, rest/protection times **minutes**. The card
+displays voltages in V and converts them for the API.
+
+Example complete upload; adjust all limits for the actual cell:
 
 ```yaml
 action: skyrc_mc3000.write_program
 data:
   slot: 1
-  battery_type: nimh
+  battery_type: liion
   operation: charge
-  capacity: 3500
-  charge_current: 1.0
-  discharge_current: 0.2
-  charge_voltage: 1650
-  discharge_voltage: 1000
-  charge_end_current: 990
-  discharge_end_current: 200
+  capacity: 3600
+  charge_current: 1.5
+  discharge_current: 0.5
+  charge_voltage: 4200
+  discharge_voltage: 3000
+  charge_end_current: 100
+  discharge_end_current: 500
   cycle_time: 0
   cycle_count: 1
   cycle_type: 0
-  delta_v: 10
-  trickle_current: 10
-  maintenance_voltage: 4150
-  protection_temperature: 19
-  protection_time: 0
+  delta_v: 0
+  trickle_current: 0
+  maintenance_voltage: 0
+  protection_temperature: 45
+  protection_time: 240
   discharge_time: 0
 ```
 
-Review every value for the actual battery before calling the service. Use
-`skyrc_mc3000.start_slot` separately after the upload and chemistry verification.
+## Device settings and curves
 
----
+Configuration entities edit temperature units, display timeout, fan mode, beep,
+screensaver and input-voltage cutoff. A change reads all settings, modifies one,
+sends the full packet and checks all fields by reading them back. All slots must
+be idle and unreserved by a battery test.
 
-## Known behavior
+The `0x56` curve response has **245 bytes**: three-byte header, two-byte big-endian
+interval and 120 big-endian millivolt samples, without a trailing checksum.
+Notification fragments are assembled and matched to the requested opcode/slot.
 
-### Single-client BLE behavior
+Curve sensors expose `samples_mv`, `samples_v`, `interval_seconds`, plot bounds
+and retrieval time. The curve card plots actual elapsed time, supports keyboard
+and touch inspection, and exports the whole buffer as CSV. Empty tail samples
+are not shown as a voltage drop. Inactive slots may return zeros; a new program
+may clear an earlier curve. Automatic curve fetching remains optional and also
+captures a final buffer after an observed program completion or stop.
 
-The MC3000 does not behave well with multiple simultaneous BLE clients.
+Use **Download diagnostics** on the integration/device page for a bounded
+snapshot of decoded telemetry and recent received protocol frames. It does not
+send additional BLE commands. Addresses, profile names and battery notes are
+excluded; firmware/hardware versions and raw unknown codes remain available.
 
-Avoid connecting these at the same time:
+## Optional battery workflows
 
-- Home Assistant integration
-- SkyRC companion app
-- separate BLE debug scripts
+The **MC3000 Batteries** card adds a separate inventory and test interface. Its
+catalogue starts empty. Records describe physical cells, rated capacity and
+allowed electrical limits, with slot assignment, search, favourites and notes.
 
-Use Companion App Mode when switching from Home Assistant to the official app.
+- **Internal resistance:** short controlled discharge up to 0.5 A, then stop.
+- **Capacity:** charge, rest, measured discharge and storage where supported.
+- **Quality:** charge/rest/discharge/recharge/resistance/storage and optional
+  voltage-drift observation after 24 hours.
 
-### Voltage curves are volatile
+Tests require explicit start. Active and paused jobs reserve their slots. Manual
+stop cancels a job only after physical stop is confirmed. After restart,
+interrupted tests require explicit resume. Crash recovery attempts one stop
+after fresh communication; unconfirmed stop keeps the slot reserved for retry.
+Resuming an interrupted capacity discharge repeats charge/rest so a partial
+discharge cannot be reported as full capacity.
 
-Voltage curve data can reset or change depending on charger state, slot state, and program activity.
+Reports export JSON, CSV, Markdown and SVG. The last 30 reports retain up to 4096
+samples each; very long tests can lose early chart samples. Capacity ratio uses
+entered rated capacity, resistance is the charger's own reading under load,
+and voltage drift is not a measured loss of capacity.
 
-Empty slots or inactive slots may return 120 zero samples.
+Actions: `save_cell`, `delete_cell`, `assign_cell`, `start_quality_test`,
+`pause_quality_test`, `resume_quality_test`, `cancel_quality_test`,
+`export_quality_report`.
 
-### Entity IDs
+## Optional dashboard cards
 
-Home Assistant preserves entity IDs in the entity registry.
+Copy `www/mc3000-*-card.js` to `/config/www/mc3000/` and register these JavaScript
+modules under **Settings → Dashboards → Resources**:
 
-If you changed integration versions during development, you may see duplicate entities with _2 suffixes. This is usually caused by changed unique IDs during development.
+```text
+/local/mc3000/mc3000-programs-card.js?v=1
+/local/mc3000/mc3000-batteries-card.js?v=1
+/local/mc3000/mc3000-curve-card.js?v=1
+```
 
-Prefer keeping stable entity IDs and removing stale duplicate entities through:
+Increment the URL version on update and reload the browser. Modules are
+self-contained, without CDN imports. Backend installation alone does not copy
+or register the frontend resources.
 
-    Settings -> Devices & services -> Entities
+Use `examples/skyrc-mc3000-advanced-dashboard.yaml` as a four-column starting
+point. Create dashboard URL path `dashboard-mc3000` or adjust its navigation.
+Check your actual entity IDs before using the example.
 
----
+```yaml
+type: custom:mc3000-programs-card
+mode: editor
+# language: en  # Optional en/uk override; otherwise follows HA, falling back to English.
+```
 
-## Development notes
+For a compact selector, replace `mode: editor` with `slot: 1`. Programs and
+batteries accept `entity`, `companion_entity` and a four-element `status_entities`
+array for renamed entities. Programs also accept `editor_path`. Curves accept
+`slot`, `entity`, `fetch_entity` and `companion_entity`. Default IDs use the
+standard `skyrc_mc3000` prefix.
 
-Validated protocol commands:
+The original ApexCharts example is retained and requires ApexCharts Card. The
+advanced example uses native HA cards and the three modules above.
 
-    0x57 version info
-    0x61 basic data
-    0x55 channel data
-    0x56 voltage curve
-    0x05 start charge
-    0xfe stop charge
+## Validation and limitations
 
-Start/stop uses a channel bitmask:
+Real-device checks used **firmware 1.18 / hardware 2.2** and four 4.20 V Li-ion
+cells: dashboard uploads, per-slot/grouped charge and discharge, verified stop,
+a short automatic resistance test, 120-sample curves, setting write/readback,
+phone handoff/reconnection and profile persistence after HA restarts. Charged
+cells taper below the selected current limit.
 
-    slot 1 = 0x01
-    slot 2 = 0x02
-    slot 3 = 0x04
-    slot 4 = 0x08
-    all    = 0x0f
+Full capacity/24-hour workflows and other chemistries have automated coverage
+but **have not been physically validated**. Na-ion on older firmware is
+unconfirmed. Long workflows are experimental. No automatic thermal/reduced-current
+retry, calibration reset or factory reset is provided.
 
-Voltage-curve parsing is provided by `skyrc-ble==3.0.0` through:
+Discharge is limited to 2 A per slot and 15 W total; the manufacturer's four-slot
+lithium limit is 1 A per slot. Managed tests use conservative limits, including
+at most 1.5 A charge. Manual programs remain subject to the charger's power
+limits. HA cannot reliably identify a physically swapped cell.
 
-    async def get_voltage_curve_data(channel: int) -> Mc3000VoltageCurveData
+## Development
 
-The integration retains its older raw-protocol fallback for defensive
-compatibility, but the pinned library normally handles this path.
+Tests use isolated HA/GATT fakes and never contact a charger or HA server:
 
----
+```sh
+python -m venv .venv
+# Activate .venv using your platform's usual command.
+python -m pip install -r requirements-test.txt
+python -m pytest
+```
 
-## Troubleshooting
+CI runs Python 3.12–3.14. Frontend tests:
 
-### The charger is not found
+```sh
+npm ci
+npx playwright install chromium
+npm test
+```
 
-Check whether Home Assistant sees Bluetooth advertisements for the charger.
+Set `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` to use an existing Chromium instead.
+UI tests cover both languages, preserved drafts, validation, confirmation, busy
+states, stop recovery, renamed entities and CSV output.
 
-The MC3000 usually advertises as:
-
-    Charger
-    34:14:B5:xx:xx:xx
-    0000ffe0-0000-1000-8000-00805f9b34fb
-
-If you use ESPHome Bluetooth Proxy, ensure:
-
-- the ESPHome device is added to Home Assistant
-- Bluetooth Proxy is enabled
-- the proxy is close enough to the MC3000
-- the SkyRC app is not already connected
-
-### ApexCharts says custom element does not exist
-
-Check that:
-
-    /config/www/apexcharts-card.js
-
-exists and that the Lovelace resource is registered as:
-
-    /local/apexcharts-card.js
-    JavaScript module
-
-Then hard-refresh the browser.
-
-### Voltage curve chart is empty
-
-Check:
-
-- the slot has fetched curve data
-- the curve sensor has samples_v attributes
-- nonzero_sample_count is above 0
-- the slot is not empty
-- the dashboard entity IDs match your Home Assistant entity registry
-
-### Companion app cannot connect
-
-Enable Companion App Mode in Home Assistant first.
-
-This pauses polling and releases the BLE connection.
-
----
+Protocol facts were cross-checked against the official SkyRC Android 4.1.2 app,
+the [manual](https://www.skyrc.com/download/MC3000_Instruction_Manual_V1.17.pdf),
+[ESP32 project](https://github.com/studiotijn/SkyRC-MC3000-HA-github),
+[Rust notes](https://github.com/nietonchique/mc3000-mcp/blob/main/docs/reverse-notes.md)
+and [Web Bluetooth project](https://github.com/x3muha/mc3000-control/blob/main/docs/BLE_PROTOCOL.md).
+No APK or decompiled application source is distributed here. See
+[the command and capability audit](docs/PROTOCOL.md) for byte-level coverage,
+unconfirmed fields and the distinction between BLE features and ESP32 workflows.
 
 ## License
 
-MIT
+MIT, following the upstream repository.

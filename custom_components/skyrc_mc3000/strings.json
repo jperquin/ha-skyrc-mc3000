@@ -14,7 +14,501 @@
       "no_devices_found": "No SkyRC MC3000 charger found. Make sure the charger is powered on and not connected to the SkyRC mobile app."
     },
     "abort": {
-      "already_configured": "This SkyRC MC3000 charger is already configured."
+      "already_configured": "This SkyRC MC3000 charger is already configured.",
+      "single_instance_allowed": "Only one MC3000 charger is supported."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "input_voltage_cutoff": {
+        "name": "Input voltage cutoff"
+      },
+      "slot_cycle_count": {
+        "name": "Slot {slot} cycle counter"
+      },
+      "slot_led": {
+        "name": "Slot {slot} indicator",
+        "state": {
+          "off": "Off",
+          "red": "Red",
+          "green": "Green"
+        }
+      },
+      "slot_power": {
+        "name": "Slot {slot} power"
+      },
+      "programs": {
+        "name": "Programs"
+      },
+      "batteries": {
+        "name": "Batteries"
+      },
+      "connection": {
+        "name": "Connection",
+        "state": {
+          "companion_app": "Companion app",
+          "connected": "Connected",
+          "disconnected": "Disconnected"
+        }
+      },
+      "display_mode": {
+        "name": "Display backlight",
+        "state": {
+          "off": "Off",
+          "auto": "Automatic",
+          "one_minute": "1 minute",
+          "three_minutes": "3 minutes",
+          "five_minutes": "5 minutes",
+          "always_on": "Always on"
+        }
+      },
+      "slot_charged_capacity": {
+        "name": "Slot {slot} charge phase capacity"
+      },
+      "slot_discharged_capacity": {
+        "name": "Slot {slot} discharge phase capacity"
+      }
+    },
+    "select": {
+      "setting_temp_unit": {
+        "name": "Temperature unit",
+        "state": {
+          "celsius": "°C",
+          "fahrenheit": "°F"
+        }
+      },
+      "setting_display": {
+        "name": "Display backlight",
+        "state": {
+          "off": "Off",
+          "auto": "Automatic",
+          "one_minute": "1 minute",
+          "three_minutes": "3 minutes",
+          "five_minutes": "5 minutes",
+          "always_on": "Always on"
+        }
+      },
+      "setting_cooling_fan": {
+        "name": "Cooling fan",
+        "state": {
+          "auto": "Automatic",
+          "off": "Off",
+          "on": "On",
+          "temp_20c": "At 20 °C",
+          "temp_25c": "At 25 °C",
+          "temp_30c": "At 30 °C",
+          "temp_35c": "At 35 °C",
+          "temp_40c": "At 40 °C",
+          "temp_45c": "At 45 °C",
+          "temp_50c": "At 50 °C"
+        }
+      }
+    },
+    "switch": {
+      "setting_system_beep": {
+        "name": "System beep"
+      },
+      "setting_screensaver": {
+        "name": "Screensaver"
+      }
+    },
+    "number": {
+      "setting_input_voltage_cutoff": {
+        "name": "Input voltage cutoff"
+      }
+    }
+  },
+  "services": {
+    "refresh": {
+      "name": "Refresh data",
+      "description": "Read the current MC3000 state and all four slots."
+    },
+    "start_slot": {
+      "name": "Start slot",
+      "description": "Start the program already uploaded or configured on the charger. The expected battery chemistry is checked before starting.",
+      "fields": {
+        "slot": {
+          "name": "Slot",
+          "description": "Charger slot number, from 1 to 4."
+        }
+      }
+    },
+    "stop_slot": {
+      "name": "Stop slot",
+      "description": "Stop charging or discharging in the selected slot. Any automatic test running in that slot is cancelled.",
+      "fields": {
+        "slot": {
+          "name": "Slot",
+          "description": "Charger slot number, from 1 to 4."
+        }
+      }
+    },
+    "start_all": {
+      "name": "Start all slots",
+      "description": "Check all four slots and start their current programs. Selecting a saved profile does not upload its settings to the charger."
+    },
+    "stop_all": {
+      "name": "Stop all slots",
+      "description": "Stop all four slots individually and cancel their automatic tests."
+    },
+    "write_program": {
+      "name": "Upload complete program",
+      "description": "Upload all program parameters to one slot without starting it. Values are validated together for the selected chemistry and mode. Save a named profile to reuse the same settings.",
+      "fields": {
+        "slot": {
+          "name": "Slot",
+          "description": "Charger slot number, from 1 to 4."
+        },
+        "battery_type": {
+          "name": "Battery chemistry",
+          "description": "Must match the battery physically installed in the slot."
+        },
+        "operation": {
+          "name": "Mode",
+          "description": "Available modes depend on the chemistry. Break-in is supported for NiMH, NiCd, and Eneloop."
+        },
+        "capacity": {
+          "name": "Capacity limit",
+          "description": "Capacity limit in 100 mAh steps; 0 disables the limit. Break-in requires a rated capacity of at least 100 mAh."
+        },
+        "charge_current": {
+          "name": "Charge current",
+          "description": "Normally 0.05–3 A. Break-in uses a capacity-derived current of 0.1 C, up to 3 A."
+        },
+        "discharge_current": {
+          "name": "Discharge current",
+          "description": "Normally 0.05–2 A. The charger permits up to 1 A per slot when discharging multiple lithium batteries. Break-in uses 0.2 C."
+        },
+        "charge_voltage": {
+          "name": "Charge termination voltage",
+          "description": "Charge termination or storage target voltage. Allowed limits depend on chemistry and mode."
+        },
+        "discharge_voltage": {
+          "name": "Discharge termination voltage",
+          "description": "Discharge termination voltage. Allowed limits depend on chemistry."
+        },
+        "charge_end_current": {
+          "name": "Charge termination current",
+          "description": "Must not exceed the main charge current. Refresh, cycle, and Na-ion require at least 10 mA; use the main current to disable current reduction."
+        },
+        "discharge_end_current": {
+          "name": "Discharge termination current",
+          "description": "Must not exceed the main discharge current. Refresh, cycle, and Na-ion require at least 10 mA; use the main current to disable current reduction."
+        },
+        "cycle_time": {
+          "name": "Rest after charge",
+          "description": "Rest duration after charging, in minutes."
+        },
+        "cycle_count": {
+          "name": "Cycle count",
+          "description": "Number of cycle repetitions."
+        },
+        "cycle_type": {
+          "name": "Cycle sequence",
+          "description": "0: charge/discharge; 1: charge/discharge/charge; 2: discharge/charge; 3: discharge/charge/discharge. For break-in: 0 is charge/discharge/charge and 1 is discharge/charge/discharge."
+        },
+        "delta_v": {
+          "name": "Negative delta voltage",
+          "description": "Voltage-drop termination for NiMH, NiCd, and Eneloop in charge, refresh, or cycle modes. Ignored for other chemistries."
+        },
+        "trickle_current": {
+          "name": "Trickle current",
+          "description": "Trickle current for NiMH, NiCd, and Eneloop; 0 disables it. Ignored for other chemistries."
+        },
+        "maintenance_voltage": {
+          "name": "Restart voltage",
+          "description": "Voltage threshold for restarting charge; 0 disables it. Allowed limits depend on chemistry."
+        },
+        "protection_temperature": {
+          "name": "Temperature protection",
+          "description": "Stop temperature from 20 to 70 °C. Set to 0 to disable temperature protection."
+        },
+        "protection_time": {
+          "name": "Time limit",
+          "description": "Time limit in minutes; 0 disables it. Break-in uses the charger fixed timing."
+        },
+        "discharge_time": {
+          "name": "Rest after discharge",
+          "description": "Rest duration after discharging, in minutes."
+        }
+      }
+    },
+    "save_profile": {
+      "name": "Save profile",
+      "description": "Create or update a named profile in Home Assistant. This action does not send commands to the charger or start any slots.",
+      "fields": {
+        "name": {
+          "name": "Name",
+          "description": "A unique name containing 1 to 60 characters."
+        },
+        "program": {
+          "name": "Complete parameters",
+          "description": "An object containing battery_type, operation, and every numeric field of Upload complete program, without slot. The Programs dashboard offers a form editor."
+        },
+        "profile_id": {
+          "name": "Profile ID",
+          "description": "Provide an existing profile ID to edit it. Omit this field when creating a profile."
+        },
+        "revision": {
+          "name": "List revision",
+          "description": "Optional concurrent-change check using the revision attribute of the profile library sensor."
+        }
+      }
+    },
+    "delete_profile": {
+      "name": "Delete profile",
+      "description": "Delete a profile from the Home Assistant library and clear its saved slot selections. Settings already uploaded to the charger remain in effect.",
+      "fields": {
+        "profile_id": {
+          "name": "Profile ID",
+          "description": "The id of the desired profile in the profiles attribute of the profile library sensor."
+        }
+      }
+    },
+    "select_profile": {
+      "name": "Select slot profile",
+      "description": "Save a profile selection for one slot in Home Assistant. Use Upload saved profile to send its settings to the charger.",
+      "fields": {
+        "slot": {
+          "name": "Slot",
+          "description": "Charger slot number, from 1 to 4."
+        },
+        "profile_id": {
+          "name": "Profile ID",
+          "description": "The id of the desired profile in the profiles attribute of the profile library sensor."
+        }
+      }
+    },
+    "apply_profile": {
+      "name": "Upload saved profile",
+      "description": "Upload one saved profile to the selected slots without starting it. Stop the slots before uploading. Specify either one slot or a list of slots.",
+      "fields": {
+        "profile_id": {
+          "name": "Profile ID",
+          "description": "Profile to upload. If omitted, the saved selection of the first specified slot is used."
+        },
+        "slot": {
+          "name": "Slot",
+          "description": "Charger slot number, from 1 to 4."
+        },
+        "slots": {
+          "name": "Multiple slots",
+          "description": "A list of integer slot numbers, for example [1, 2, 3, 4]. Specify this field or a single slot."
+        },
+        "validate_only": {
+          "name": "Validate only",
+          "description": "Validate the saved parameters and return them in the response without sending commands to the charger."
+        }
+      }
+    },
+    "save_cell": {
+      "name": "Save battery",
+      "description": "Create or update a physical battery record for measurements and reports. Enter the rated capacity and permitted settings from the battery specifications.",
+      "fields": {
+        "name": {
+          "name": "Name or label",
+          "description": "Name of this physical battery, from 1 to 60 characters."
+        },
+        "chemistry": {
+          "name": "Battery chemistry",
+          "description": "Must match the physical battery."
+        },
+        "capacity_mah": {
+          "name": "Rated capacity",
+          "description": "Nominal capacity used to calculate test currents and compare measured capacity with rated capacity."
+        },
+        "charge_current": {
+          "name": "Maximum charge current",
+          "description": "Maximum permitted current during a test. The actual current may be lower based on rated capacity."
+        },
+        "discharge_current": {
+          "name": "Maximum discharge current",
+          "description": "Maximum permitted current during a test. Parallel testing uses at most 1 A per slot."
+        },
+        "charge_voltage": {
+          "name": "Charge termination voltage",
+          "description": "Set according to the battery chemistry and specifications."
+        },
+        "discharge_voltage": {
+          "name": "Discharge termination voltage",
+          "description": "Set according to the battery chemistry and specifications."
+        },
+        "storage_voltage": {
+          "name": "Storage voltage",
+          "description": "Required for chemistries that support storage mode; ignored for other chemistries."
+        },
+        "nominal_resistance_mohm": {
+          "name": "Rated internal resistance",
+          "description": "Optional reference value; 0 means unspecified."
+        },
+        "type_name": {
+          "name": "Model or type",
+          "description": "Optional, up to 60 characters."
+        },
+        "notes": {
+          "name": "Notes",
+          "description": "Optional, up to 500 characters."
+        },
+        "color": {
+          "name": "Label color",
+          "description": "A color in #RRGGBB format, for example #3b82f6."
+        },
+        "favorite": {
+          "name": "Favorite battery",
+          "description": "Mark this battery as a favorite."
+        },
+        "cell_id": {
+          "name": "Battery ID",
+          "description": "Provide an existing record ID to edit it. Omit this field when creating a record."
+        },
+        "revision": {
+          "name": "List revision",
+          "description": "Optional concurrent-change check using the cell_revision attribute of the battery library sensor."
+        }
+      }
+    },
+    "delete_cell": {
+      "name": "Delete battery",
+      "description": "Delete a physical battery record and its slot assignments. Cancel any active or paused tests for this battery first.",
+      "fields": {
+        "cell_id": {
+          "name": "Battery ID",
+          "description": "The id of the desired record in the cells attribute of the battery library sensor."
+        }
+      }
+    },
+    "assign_cell": {
+      "name": "Assign battery to slot",
+      "description": "Identify the physical battery installed in a slot. One battery can only be assigned to one slot. This action does not start the charger.",
+      "fields": {
+        "slot": {
+          "name": "Slot",
+          "description": "Charger slot number, from 1 to 4."
+        },
+        "cell_id": {
+          "name": "Battery ID",
+          "description": "Provide a battery record ID. Omit this field to clear the slot assignment."
+        }
+      }
+    },
+    "start_quality_test": {
+      "name": "Start battery test",
+      "description": "Run measurements for the batteries assigned to the selected slots. A quality test includes charging, capacity measurement, recharging, resistance measurement, and storage mode when supported. Rest periods between phases are included.",
+      "fields": {
+        "slot": {
+          "name": "Slot",
+          "description": "Charger slot number, from 1 to 4."
+        },
+        "slots": {
+          "name": "Multiple slots",
+          "description": "A list of integer slot numbers, for example [1, 2, 3, 4]. Specify this field or a single slot."
+        },
+        "test_type": {
+          "name": "Test type",
+          "description": "Each selected slot uses its assigned battery."
+        },
+        "self_discharge": {
+          "name": "Observe self-discharge",
+          "description": "For quality tests only: compare voltage after 24 hours following stabilization. This measures voltage change, not a percentage of lost capacity."
+        }
+      }
+    },
+    "pause_quality_test": {
+      "name": "Pause test",
+      "description": "Pause the test and stop the physical program in the selected slots. Explicitly resuming restarts the current phase from the beginning.",
+      "fields": {
+        "slot": {
+          "name": "Slot",
+          "description": "Charger slot number, from 1 to 4."
+        },
+        "slots": {
+          "name": "Multiple slots",
+          "description": "A list of integer slot numbers, for example [1, 2, 3, 4]. Specify this field or a single slot."
+        }
+      }
+    },
+    "resume_quality_test": {
+      "name": "Resume test",
+      "description": "Resume a paused test from the beginning of its current phase. The same assigned battery must still be installed in the slot.",
+      "fields": {
+        "slot": {
+          "name": "Slot",
+          "description": "Charger slot number, from 1 to 4."
+        },
+        "slots": {
+          "name": "Multiple slots",
+          "description": "A list of integer slot numbers, for example [1, 2, 3, 4]. Specify this field or a single slot."
+        }
+      }
+    },
+    "cancel_quality_test": {
+      "name": "Cancel test",
+      "description": "Mark the test as cancelled, retain the available results, and stop the selected slots.",
+      "fields": {
+        "slot": {
+          "name": "Slot",
+          "description": "Charger slot number, from 1 to 4."
+        },
+        "slots": {
+          "name": "Multiple slots",
+          "description": "A list of integer slot numbers, for example [1, 2, 3, 4]. Specify this field or a single slot."
+        }
+      }
+    },
+    "export_quality_report": {
+      "name": "Export report",
+      "description": "Return the report contents, MIME type, and suggested filename in the action response. This does not start the charger.",
+      "fields": {
+        "report_id": {
+          "name": "Report ID",
+          "description": "The id of the desired report in the reports attribute of the battery library sensor."
+        },
+        "format": {
+          "name": "Format",
+          "description": "JSON contains the complete data; CSV contains measurements; Markdown provides a summary; SVG plots voltage."
+        }
+      }
+    }
+  },
+  "selector": {
+    "chemistry": {
+      "options": {
+        "liion": "Li-ion",
+        "life": "LiFePO₄",
+        "liion_4_35": "Li-ion 4.35 V",
+        "nimh": "NiMH",
+        "nicd": "NiCd",
+        "nizn": "NiZn",
+        "eneloop": "Eneloop",
+        "ram": "RAM",
+        "batlto": "LTO",
+        "naion": "Na-ion"
+      }
+    },
+    "operation": {
+      "options": {
+        "charge": "Charge",
+        "refresh": "Refresh",
+        "storage": "Storage",
+        "breakin": "Break-in",
+        "discharge": "Discharge",
+        "cycle": "Cycle"
+      }
+    },
+    "quality_test_type": {
+      "options": {
+        "quality": "Full quality test",
+        "capacity": "Capacity measurement",
+        "ir": "Internal resistance measurement"
+      }
+    },
+    "report_format": {
+      "options": {
+        "json": "JSON — complete data",
+        "csv": "CSV — measurements",
+        "markdown": "Markdown — summary",
+        "svg": "SVG — chart"
+      }
     }
   }
 }
