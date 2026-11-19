@@ -60,7 +60,8 @@ class SkyrcMc3000Coordinator(DataUpdateCoordinator):
 
         self.auto_fetch_voltage_curves = False
         self.auto_fetch_voltage_curve_interval_seconds = 30
-        self._last_auto_fetch_voltage_curves_monotonic = 0.0
+        # Monotonic clock origins are arbitrary; zero is a valid fetch time.
+        self._last_auto_fetch_voltage_curves_monotonic: float | None = None
 
     async def _find_device_via_ha_bluetooth(self):
         """Find charger BLEDevice through Home Assistant Bluetooth manager."""
@@ -640,6 +641,7 @@ class SkyrcMc3000Coordinator(DataUpdateCoordinator):
         active_slots: list[int] = []
         periodic_due = (
             force
+            or self._last_auto_fetch_voltage_curves_monotonic is None
             or now - self._last_auto_fetch_voltage_curves_monotonic
             >= self.auto_fetch_voltage_curve_interval_seconds
         )

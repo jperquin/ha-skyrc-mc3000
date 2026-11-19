@@ -406,6 +406,37 @@ async def test_curve_serialization_and_auto_fetch_do_not_deadlock(setup):
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("clock_origin", (-100.0, 0.0, 5.0, 29.0, 1000.0))
+async def test_first_auto_curve_is_immediate_at_any_monotonic_origin_then_throttled(
+    setup, monkeypatch, clock_origin
+):
+    coordinator, charger, _ = setup
+    clock = [clock_origin]
+    # Patch only the coordinator clock; the asyncio event loop keeps real time.
+    monkeypatch.setattr(
+        MODULE, "time", types.SimpleNamespace(monotonic=lambda: clock[0])
+    )
+    channel = charger.state.channels[0]
+    channel.status, channel.current = 2, 0.2
+    # Enabling before the first state arrives cannot perform the forced fetch.
+    # The first subsequent normal poll must therefore fetch immediately.
+    await coordinator.async_set_auto_fetch_voltage_curves(True)
+    assert not charger.curve_calls
+    await coordinator._async_update_data()
+    assert charger.curve_calls == [0]
+    await coordinator._async_update_data()
+    assert charger.curve_calls == [0], (
+        "A first fetch at time zero still starts the throttle"
+    )
+    clock[0] = clock_origin + 29.99
+    await coordinator._async_update_data()
+    assert charger.curve_calls == [0]
+    clock[0] = clock_origin + 30
+    await coordinator._async_update_data()
+    assert charger.curve_calls == [0, 0]
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize("terminal_status", (0, 4))
 async def test_auto_curve_fetches_final_once_without_waiting_periodic_interval(
     setup, terminal_status
