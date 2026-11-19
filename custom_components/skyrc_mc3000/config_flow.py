@@ -76,7 +76,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             ):
                 source = getattr(info, "source", None)
                 rssi = getattr(info, "rssi", None)
-                devices[address] = f"{name or 'SkyRC MC3000'} ({address}) via {source}, RSSI {rssi}"
+                devices[address] = (
+                    f"{name or 'SkyRC MC3000'} ({address}) via {source}, RSSI {rssi}"
+                )
 
         return devices
 
@@ -92,7 +94,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         return vol.Schema(
             {
-                vol.Required(CONF_ADDRESS, default="34:14:B5:3F:92:3D"): str,
+                vol.Required(CONF_ADDRESS): str,
                 vol.Optional(CONF_NAME, default=DEFAULT_NAME): str,
             }
         )

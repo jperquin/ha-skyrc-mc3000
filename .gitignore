@@ -6,3 +6,8 @@ ble_scan_results.txt
 mc3000_connect_test.txt
 mc3000_method_signatures.txt
 skyrc_ble_api_inspect.txt
+.venv/
+.pytest_cache/
+.ruff_cache/
+.test-artifacts/
+node_modules/

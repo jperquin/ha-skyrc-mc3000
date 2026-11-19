@@ -1,0 +1,16 @@
+{
+  "name": "ha-skyrc-mc3000-frontend-tests",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node tests/frontend/run.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "acorn": "8.19.0",
+    "happy-dom": "21.0.4",
+    "playwright": "1.65.1"
+  }
+}

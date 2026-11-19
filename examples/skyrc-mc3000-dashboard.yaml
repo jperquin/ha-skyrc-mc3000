@@ -17,7 +17,7 @@ views:
               - type: divider
 
               - entity: sensor.skyrc_mc3000_input_voltage
-                name: Input voltage
+                name: Input-voltage cutoff
               - entity: sensor.skyrc_mc3000_cooling_fan_mode
                 name: Cooling fan
               - entity: sensor.skyrc_mc3000_display_mode

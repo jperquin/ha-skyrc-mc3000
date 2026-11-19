@@ -1,172 +1,697 @@
-stop_slot:
-  name: Stop slot
-  description: Stop charging/discharging on a single MC3000 slot.
-  fields:
-    slot:
-      name: Slot
-      description: Slot number, 1 to 4.
-      required: true
-      selector:
-        number:
-          min: 1
-          max: 4
-          mode: box
-
-stop_all:
-  name: Stop all slots
-  description: Stop charging/discharging on all MC3000 slots.
-
-start_slot:
-  name: Start slot
-  description: Start the currently configured MC3000 program on a single slot.
-  fields:
-    slot:
-      name: Slot
-      description: Slot number, 1 to 4.
-      required: true
-      selector:
-        number:
-          min: 1
-          max: 4
-          mode: box
-
 refresh:
   name: Refresh data
-  description: Force an immediate data refresh from the MC3000.
-
-write_program:
-  name: Write complete program
-  description: >-
-    Write a complete program to one MC3000 slot. The MC3000 cannot change only
-    the battery chemistry; all current, voltage and protection parameters are
-    written together. This service does not start the program.
+  description: Read the current MC3000 state and all four slots.
+start_slot:
+  name: Start slot
+  description: Start the program already uploaded or configured on the charger. The expected battery chemistry is checked before starting.
   fields:
     slot:
       name: Slot
-      description: Slot number, 1 to 4.
+      description: Charger slot number, from 1 to 4.
       required: true
       selector:
         number:
           min: 1
           max: 4
+          step: 1
+          mode: box
+stop_slot:
+  name: Stop slot
+  description: Stop charging or discharging in the selected slot. Any automatic test running in that slot is cancelled.
+  fields:
+    slot:
+      name: Slot
+      description: Charger slot number, from 1 to 4.
+      required: true
+      selector:
+        number:
+          min: 1
+          max: 4
+          step: 1
+          mode: box
+start_all:
+  name: Start all slots
+  description: Check all four slots and start their current programs. Selecting a saved profile does not upload its settings to the charger.
+stop_all:
+  name: Stop all slots
+  description: Stop all four slots individually and cancel their automatic tests.
+write_program:
+  name: Upload complete program
+  description: Upload all program parameters to one slot without starting it. Values are validated together for the selected chemistry and mode. Save a named profile to reuse the same settings.
+  fields:
+    slot:
+      name: Slot
+      description: Charger slot number, from 1 to 4.
+      required: true
+      selector:
+        number:
+          min: 1
+          max: 4
+          step: 1
           mode: box
     battery_type:
-      name: Battery type
+      name: Battery chemistry
+      description: Must match the battery physically installed in the slot.
       required: true
       selector:
         select:
           options:
-            - liion
-            - life
-            - liion_4_35
-            - nimh
-            - nicd
-            - nizn
-            - eneloop
-            - ram
-            - batlto
+          - liion
+          - life
+          - liion_4_35
+          - nimh
+          - nicd
+          - nizn
+          - eneloop
+          - ram
+          - batlto
+          - naion
+          translation_key: chemistry
     operation:
-      name: Operation
+      name: Mode
+      description: Available modes depend on the chemistry. Break-in is supported for NiMH, NiCd, and Eneloop.
       required: true
       selector:
         select:
           options:
-            - charge
-            - refresh
-            - storage
-            - breakin
-            - discharge
-            - cycle
+          - charge
+          - refresh
+          - storage
+          - breakin
+          - discharge
+          - cycle
+          translation_key: operation
     capacity:
-      name: Capacity
-      description: Capacity protection value in mAh.
+      name: Capacity limit
+      description: Capacity limit in 100 mAh steps; 0 disables the limit. Break-in requires a rated capacity of at least 100 mAh.
       required: true
-      selector: &word
+      selector:
         number:
           min: 0
-          max: 65535
+          max: 50000
+          step: 100
           mode: box
+          unit_of_measurement: mAh
     charge_current:
       name: Charge current
-      description: Charge current in amperes, in 0.001 A increments.
+      description: Normally 0.05–3 A. Break-in uses a capacity-derived current of 0.1 C, up to 3 A.
       required: true
-      selector: &current
+      selector:
         number:
-          min: 0
-          max: 65.535
-          step: 0.001
-          unit_of_measurement: A
+          min: 0.01
+          max: 3.0
+          step: 0.01
           mode: box
+          unit_of_measurement: A
     discharge_current:
       name: Discharge current
-      description: Discharge current in amperes, in 0.001 A increments.
+      description: Normally 0.05–2 A. The charger permits up to 1 A per slot when discharging multiple lithium batteries. Break-in uses 0.2 C.
       required: true
-      selector: *current
-    charge_voltage:
-      name: Charge voltage
-      description: Charge voltage limit in millivolts.
-      required: true
-      selector: *word
-    discharge_voltage:
-      name: Discharge voltage
-      description: Discharge voltage limit in millivolts.
-      required: true
-      selector: *word
-    charge_end_current:
-      name: Charge end current
-      description: Charge termination current in milliamperes.
-      required: true
-      selector: *word
-    discharge_end_current:
-      name: Discharge end current
-      description: Discharge termination current in milliamperes.
-      required: true
-      selector: *word
-    cycle_time:
-      name: Cycle time
-      default: 0
-      selector: &byte
+      selector:
         number:
-          min: 0
-          max: 255
+          min: 0.01
+          max: 2.0
+          step: 0.01
           mode: box
-    cycle_count:
-      name: Cycle count
-      default: 1
-      selector: *byte
-    cycle_type:
-      name: Cycle type
-      default: 0
-      selector: *byte
-    delta_v:
-      name: Delta V
-      default: 0
-      selector: *byte
-    trickle_current:
-      name: Trickle current
-      description: Trickle current in milliamperes, in 10 mA increments.
-      default: 0
+          unit_of_measurement: A
+    charge_voltage:
+      name: Charge termination voltage
+      description: Charge termination or storage target voltage. Allowed limits depend on chemistry and mode.
+      required: true
+      selector:
+        number:
+          min: 500
+          max: 4400
+          step: 10
+          mode: box
+          unit_of_measurement: mV
+    discharge_voltage:
+      name: Discharge termination voltage
+      description: Discharge termination voltage. Allowed limits depend on chemistry.
+      required: true
+      selector:
+        number:
+          min: 500
+          max: 4000
+          step: 10
+          mode: box
+          unit_of_measurement: mV
+    charge_end_current:
+      name: Charge termination current
+      description: Must not exceed the main charge current. Refresh, cycle, and Na-ion require at least 10 mA; use the main current to disable current reduction.
+      required: true
       selector:
         number:
           min: 0
-          max: 255
+          max: 3000
           step: 10
-          unit_of_measurement: mA
           mode: box
+          unit_of_measurement: mA
+    discharge_end_current:
+      name: Discharge termination current
+      description: Must not exceed the main discharge current. Refresh, cycle, and Na-ion require at least 10 mA; use the main current to disable current reduction.
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 2000
+          step: 10
+          mode: box
+          unit_of_measurement: mA
+    cycle_time:
+      name: Rest after charge
+      description: Rest duration after charging, in minutes.
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 240
+          step: 1
+          mode: box
+          unit_of_measurement: min
+    cycle_count:
+      name: Cycle count
+      description: Number of cycle repetitions.
+      required: true
+      selector:
+        number:
+          min: 1
+          max: 99
+          step: 1
+          mode: box
+    cycle_type:
+      name: Cycle sequence
+      description: '0: charge/discharge; 1: charge/discharge/charge; 2: discharge/charge; 3: discharge/charge/discharge. For break-in: 0 is charge/discharge/charge and 1 is discharge/charge/discharge.'
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 3
+          step: 1
+          mode: box
+    delta_v:
+      name: Negative delta voltage
+      description: Voltage-drop termination for NiMH, NiCd, and Eneloop in charge, refresh, or cycle modes. Ignored for other chemistries.
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 20
+          step: 1
+          mode: box
+          unit_of_measurement: mV
+    trickle_current:
+      name: Trickle current
+      description: Trickle current for NiMH, NiCd, and Eneloop; 0 disables it. Ignored for other chemistries.
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 300
+          step: 10
+          mode: box
+          unit_of_measurement: mA
     maintenance_voltage:
-      name: Maintenance voltage
-      description: Maintenance voltage in millivolts.
-      default: 0
-      selector: *word
+      name: Restart voltage
+      description: Voltage threshold for restarting charge; 0 disables it. Allowed limits depend on chemistry.
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 4400
+          step: 10
+          mode: box
+          unit_of_measurement: mV
     protection_temperature:
-      name: Protection temperature
-      default: 0
-      selector: *byte
+      name: Temperature protection
+      description: Stop temperature from 20 to 70 °C. Set to 0 to disable temperature protection.
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 70
+          step: 1
+          mode: box
+          unit_of_measurement: °C
     protection_time:
-      name: Protection time
-      default: 0
-      selector: *word
+      name: Time limit
+      description: Time limit in minutes; 0 disables it. Break-in uses the charger fixed timing.
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 1440
+          step: 1
+          mode: box
+          unit_of_measurement: min
     discharge_time:
-      name: Discharge time
-      default: 0
-      selector: *byte
+      name: Rest after discharge
+      description: Rest duration after discharging, in minutes.
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 240
+          step: 1
+          mode: box
+          unit_of_measurement: min
+save_profile:
+  name: Save profile
+  description: Create or update a named profile in Home Assistant. This action does not send commands to the charger or start any slots.
+  fields:
+    name:
+      name: Name
+      description: A unique name containing 1 to 60 characters.
+      required: true
+      selector:
+        text: {}
+    program:
+      name: Complete parameters
+      description: An object containing battery_type, operation, and every numeric field of Upload complete program, without slot. The Programs dashboard offers a form editor.
+      required: true
+      selector:
+        object: {}
+      example:
+        capacity: 0
+        charge_current: 0.5
+        discharge_current: 0.2
+        charge_end_current: 100
+        discharge_end_current: 200
+        cycle_count: 1
+        cycle_type: 0
+        delta_v: 0
+        trickle_current: 0
+        protection_temperature: 45
+        protection_time: 0
+        battery_type: liion
+        operation: charge
+        charge_voltage: 4200
+        discharge_voltage: 3000
+        maintenance_voltage: 0
+        cycle_time: 0
+        discharge_time: 0
+    profile_id:
+      name: Profile ID
+      description: Provide an existing profile ID to edit it. Omit this field when creating a profile.
+      required: false
+      selector:
+        text: {}
+    revision:
+      name: List revision
+      description: Optional concurrent-change check using the revision attribute of the profile library sensor.
+      required: false
+      selector:
+        number:
+          min: 0
+          max: 2147483647
+          step: 1
+          mode: box
+      advanced: true
+delete_profile:
+  name: Delete profile
+  description: Delete a profile from the Home Assistant library and clear its saved slot selections. Settings already uploaded to the charger remain in effect.
+  fields:
+    profile_id:
+      name: Profile ID
+      description: The id of the desired profile in the profiles attribute of the profile library sensor.
+      required: true
+      selector:
+        text: {}
+select_profile:
+  name: Select slot profile
+  description: Save a profile selection for one slot in Home Assistant. Use Upload saved profile to send its settings to the charger.
+  fields:
+    slot:
+      name: Slot
+      description: Charger slot number, from 1 to 4.
+      required: true
+      selector:
+        number:
+          min: 1
+          max: 4
+          step: 1
+          mode: box
+    profile_id:
+      name: Profile ID
+      description: The id of the desired profile in the profiles attribute of the profile library sensor.
+      required: true
+      selector:
+        text: {}
+apply_profile:
+  name: Upload saved profile
+  description: Upload one saved profile to the selected slots without starting it. Stop the slots before uploading. Specify either one slot or a list of slots.
+  fields:
+    profile_id:
+      name: Profile ID
+      description: Profile to upload. If omitted, the saved selection of the first specified slot is used.
+      required: false
+      selector:
+        text: {}
+    slot:
+      name: Slot
+      description: Charger slot number, from 1 to 4.
+      required: false
+      selector:
+        number:
+          min: 1
+          max: 4
+          step: 1
+          mode: box
+    slots:
+      name: Multiple slots
+      description: A list of integer slot numbers, for example [1, 2, 3, 4]. Specify this field or a single slot.
+      required: false
+      selector:
+        object: {}
+      example:
+      - 1
+      - 2
+      - 3
+      - 4
+    validate_only:
+      name: Validate only
+      description: Validate the saved parameters and return them in the response without sending commands to the charger.
+      required: false
+      selector:
+        boolean: {}
+      default: false
+save_cell:
+  name: Save battery
+  description: Create or update a physical battery record for measurements and reports. Enter the rated capacity and permitted settings from the battery specifications.
+  fields:
+    name:
+      name: Name or label
+      description: Name of this physical battery, from 1 to 60 characters.
+      required: true
+      selector:
+        text: {}
+    chemistry:
+      name: Battery chemistry
+      description: Must match the physical battery.
+      required: true
+      selector:
+        select:
+          options:
+          - liion
+          - life
+          - liion_4_35
+          - nimh
+          - nicd
+          - nizn
+          - eneloop
+          - ram
+          - batlto
+          - naion
+          translation_key: chemistry
+    capacity_mah:
+      name: Rated capacity
+      description: Nominal capacity used to calculate test currents and compare measured capacity with rated capacity.
+      required: true
+      selector:
+        number:
+          min: 100
+          max: 50000
+          step: 100
+          mode: box
+          unit_of_measurement: mAh
+    charge_current:
+      name: Maximum charge current
+      description: Maximum permitted current during a test. The actual current may be lower based on rated capacity.
+      required: true
+      selector:
+        number:
+          min: 0.05
+          max: 1.5
+          step: 0.01
+          mode: box
+          unit_of_measurement: A
+    discharge_current:
+      name: Maximum discharge current
+      description: Maximum permitted current during a test. Parallel testing uses at most 1 A per slot.
+      required: true
+      selector:
+        number:
+          min: 0.05
+          max: 2
+          step: 0.01
+          mode: box
+          unit_of_measurement: A
+    charge_voltage:
+      name: Charge termination voltage
+      description: Set according to the battery chemistry and specifications.
+      required: true
+      selector:
+        number:
+          min: 500
+          max: 4400
+          step: 10
+          mode: box
+          unit_of_measurement: mV
+    discharge_voltage:
+      name: Discharge termination voltage
+      description: Set according to the battery chemistry and specifications.
+      required: true
+      selector:
+        number:
+          min: 500
+          max: 4000
+          step: 10
+          mode: box
+          unit_of_measurement: mV
+    storage_voltage:
+      name: Storage voltage
+      description: Required for chemistries that support storage mode; ignored for other chemistries.
+      required: false
+      selector:
+        number:
+          min: 500
+          max: 4400
+          step: 10
+          mode: box
+          unit_of_measurement: mV
+    nominal_resistance_mohm:
+      name: Rated internal resistance
+      description: Optional reference value; 0 means unspecified.
+      required: false
+      selector:
+        number:
+          min: 0
+          max: 10000
+          step: 1
+          mode: box
+          unit_of_measurement: mΩ
+    type_name:
+      name: Model or type
+      description: Optional, up to 60 characters.
+      required: false
+      selector:
+        text: {}
+    notes:
+      name: Notes
+      description: Optional, up to 500 characters.
+      required: false
+      selector:
+        text:
+          multiline: true
+    color:
+      name: Label color
+      description: 'A color in #RRGGBB format, for example #3b82f6.'
+      required: false
+      selector:
+        text: {}
+    favorite:
+      name: Favorite battery
+      description: Mark this battery as a favorite.
+      required: false
+      selector:
+        boolean: {}
+      default: false
+    cell_id:
+      name: Battery ID
+      description: Provide an existing record ID to edit it. Omit this field when creating a record.
+      required: false
+      selector:
+        text: {}
+    revision:
+      name: List revision
+      description: Optional concurrent-change check using the cell_revision attribute of the battery library sensor.
+      required: false
+      selector:
+        number:
+          min: 0
+          max: 2147483647
+          step: 1
+          mode: box
+      advanced: true
+delete_cell:
+  name: Delete battery
+  description: Delete a physical battery record and its slot assignments. Cancel any active or paused tests for this battery first.
+  fields:
+    cell_id:
+      name: Battery ID
+      description: The id of the desired record in the cells attribute of the battery library sensor.
+      required: true
+      selector:
+        text: {}
+assign_cell:
+  name: Assign battery to slot
+  description: Identify the physical battery installed in a slot. One battery can only be assigned to one slot. This action does not start the charger.
+  fields:
+    slot:
+      name: Slot
+      description: Charger slot number, from 1 to 4.
+      required: true
+      selector:
+        number:
+          min: 1
+          max: 4
+          step: 1
+          mode: box
+    cell_id:
+      name: Battery ID
+      description: Provide a battery record ID. Omit this field to clear the slot assignment.
+      required: false
+      selector:
+        text: {}
+start_quality_test:
+  name: Start battery test
+  description: Run measurements for the batteries assigned to the selected slots. A quality test includes charging, capacity measurement, recharging, resistance measurement, and storage mode when supported. Rest periods between phases are included.
+  fields:
+    slot:
+      name: Slot
+      description: Charger slot number, from 1 to 4.
+      required: false
+      selector:
+        number:
+          min: 1
+          max: 4
+          step: 1
+          mode: box
+    slots:
+      name: Multiple slots
+      description: A list of integer slot numbers, for example [1, 2, 3, 4]. Specify this field or a single slot.
+      required: false
+      selector:
+        object: {}
+      example:
+      - 1
+      - 2
+      - 3
+      - 4
+    test_type:
+      name: Test type
+      description: Each selected slot uses its assigned battery.
+      required: false
+      selector:
+        select:
+          options:
+          - quality
+          - capacity
+          - ir
+          translation_key: quality_test_type
+      default: quality
+    self_discharge:
+      name: Observe self-discharge
+      description: 'For quality tests only: compare voltage after 24 hours following stabilization. This measures voltage change, not a percentage of lost capacity.'
+      required: false
+      selector:
+        boolean: {}
+      default: true
+pause_quality_test:
+  name: Pause test
+  description: Pause the test and stop the physical program in the selected slots. Explicitly resuming restarts the current phase from the beginning.
+  fields:
+    slot:
+      name: Slot
+      description: Charger slot number, from 1 to 4.
+      required: false
+      selector:
+        number:
+          min: 1
+          max: 4
+          step: 1
+          mode: box
+    slots:
+      name: Multiple slots
+      description: A list of integer slot numbers, for example [1, 2, 3, 4]. Specify this field or a single slot.
+      required: false
+      selector:
+        object: {}
+      example:
+      - 1
+      - 2
+      - 3
+      - 4
+resume_quality_test:
+  name: Resume test
+  description: Resume a paused test from the beginning of its current phase. The same assigned battery must still be installed in the slot.
+  fields:
+    slot:
+      name: Slot
+      description: Charger slot number, from 1 to 4.
+      required: false
+      selector:
+        number:
+          min: 1
+          max: 4
+          step: 1
+          mode: box
+    slots:
+      name: Multiple slots
+      description: A list of integer slot numbers, for example [1, 2, 3, 4]. Specify this field or a single slot.
+      required: false
+      selector:
+        object: {}
+      example:
+      - 1
+      - 2
+      - 3
+      - 4
+cancel_quality_test:
+  name: Cancel test
+  description: Mark the test as cancelled, retain the available results, and stop the selected slots.
+  fields:
+    slot:
+      name: Slot
+      description: Charger slot number, from 1 to 4.
+      required: false
+      selector:
+        number:
+          min: 1
+          max: 4
+          step: 1
+          mode: box
+    slots:
+      name: Multiple slots
+      description: A list of integer slot numbers, for example [1, 2, 3, 4]. Specify this field or a single slot.
+      required: false
+      selector:
+        object: {}
+      example:
+      - 1
+      - 2
+      - 3
+      - 4
+export_quality_report:
+  name: Export report
+  description: Return the report contents, MIME type, and suggested filename in the action response. This does not start the charger.
+  fields:
+    report_id:
+      name: Report ID
+      description: The id of the desired report in the reports attribute of the battery library sensor.
+      required: true
+      selector:
+        text: {}
+    format:
+      name: Format
+      description: JSON contains the complete data; CSV contains measurements; Markdown provides a summary; SVG plots voltage.
+      required: false
+      selector:
+        select:
+          options:
+          - json
+          - csv
+          - markdown
+          - svg
+          translation_key: report_format
+      default: json

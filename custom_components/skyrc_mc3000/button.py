@@ -97,18 +97,7 @@ class SkyrcMc3000StopAllButton(SkyrcMc3000BaseButton):
         """Stop all slots."""
         self._raise_if_companion_mode()
 
-        charger = await self.coordinator._ensure_charger()
-
-        if not charger.is_connected:
-            await charger.connect()
-
-        if hasattr(charger, "stop_charge_multi"):
-            await charger.stop_charge_multi(0x0F)
-        else:
-            for channel in range(4):
-                await charger.stop_charge(channel)
-
-        await self.coordinator.async_request_refresh()
+        await self.coordinator.async_stop_slots([1, 2, 3, 4])
 
 
 class SkyrcMc3000StartAllButton(SkyrcMc3000BaseButton):
@@ -126,13 +115,7 @@ class SkyrcMc3000StartAllButton(SkyrcMc3000BaseButton):
         """Start all slots through the chemistry-checked start service."""
         self._raise_if_companion_mode()
 
-        for slot in range(1, 5):
-            await self.hass.services.async_call(
-                DOMAIN,
-                "start_slot",
-                {"slot": slot},
-                blocking=True,
-            )
+        await self.coordinator.async_start_slots([1, 2, 3, 4])
 
 
 class SkyrcMc3000SlotStartButton(SkyrcMc3000BaseButton):
@@ -147,21 +130,13 @@ class SkyrcMc3000SlotStartButton(SkyrcMc3000BaseButton):
         self._attr_unique_id = (
             f"skyrc_mc3000_{coordinator.address}_slot_{slot_index + 1}_start"
         )
-        self._attr_suggested_object_id = (
-            f"skyrc_mc3000_slot_{slot_index + 1}_start"
-        )
+        self._attr_suggested_object_id = f"skyrc_mc3000_slot_{slot_index + 1}_start"
 
     async def async_press(self) -> None:
         """Start slot using charger-configured program."""
         self._raise_if_companion_mode()
 
-        charger = await self.coordinator._ensure_charger()
-
-        if not charger.is_connected:
-            await charger.connect()
-
-        await charger.start_charge(self.slot_index)
-        await self.coordinator.async_request_refresh()
+        await self.coordinator.async_start_slots([self.slot_index + 1])
 
 
 class SkyrcMc3000SlotStopButton(SkyrcMc3000BaseButton):
@@ -176,21 +151,13 @@ class SkyrcMc3000SlotStopButton(SkyrcMc3000BaseButton):
         self._attr_unique_id = (
             f"skyrc_mc3000_{coordinator.address}_slot_{slot_index + 1}_stop"
         )
-        self._attr_suggested_object_id = (
-            f"skyrc_mc3000_slot_{slot_index + 1}_stop"
-        )
+        self._attr_suggested_object_id = f"skyrc_mc3000_slot_{slot_index + 1}_stop"
 
     async def async_press(self) -> None:
         """Stop slot."""
         self._raise_if_companion_mode()
 
-        charger = await self.coordinator._ensure_charger()
-
-        if not charger.is_connected:
-            await charger.connect()
-
-        await charger.stop_charge(self.slot_index)
-        await self.coordinator.async_request_refresh()
+        await self.coordinator.async_stop_slots([self.slot_index + 1])
 
 
 class SkyrcMc3000FetchVoltageCurveButton(SkyrcMc3000BaseButton):
@@ -202,9 +169,7 @@ class SkyrcMc3000FetchVoltageCurveButton(SkyrcMc3000BaseButton):
         super().__init__(coordinator)
         self.slot_index = slot_index
         self._attr_name = f"SkyRC MC3000 Slot {slot_index + 1} Fetch Voltage Curve"
-        self._attr_unique_id = (
-            f"skyrc_mc3000_{coordinator.address}_slot_{slot_index + 1}_fetch_voltage_curve"
-        )
+        self._attr_unique_id = f"skyrc_mc3000_{coordinator.address}_slot_{slot_index + 1}_fetch_voltage_curve"
         self._attr_suggested_object_id = (
             f"skyrc_mc3000_slot_{slot_index + 1}_fetch_voltage_curve"
         )

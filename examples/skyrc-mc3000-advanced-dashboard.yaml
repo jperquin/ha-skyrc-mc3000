@@ -1,0 +1,950 @@
+# SkyRC MC3000 advanced dashboard example (Home Assistant 2026.5+).
+#
+# Create a dashboard with URL path dashboard-mc3000, then paste this file into
+# its Raw configuration editor. If you choose another URL path, replace every
+# /dashboard-mc3000/ navigation_path, back_path and editor_path below.
+# This is dashboard configuration, not a configuration.yaml integration entry.
+#
+# First copy the three modules from this repository to /config/www/mc3000/
+# and register each as type: module under Settings > Dashboards > Resources:
+#   /local/mc3000/mc3000-programs-card.js?v=1
+#   /local/mc3000/mc3000-batteries-card.js?v=1
+#   /local/mc3000/mc3000-curve-card.js?v=1
+# Increment the URL version when updating the files. No other custom cards,
+# themes, helpers, scripts or automations are required.
+#
+# CHECK YOUR ENTITY IDS before importing. These are generic example IDs using
+# the standard skyrc_mc3000 prefix, not a device address or a real household.
+# Existing registries and localized installations may use different IDs,
+# especially *_completed_cycles, *_indicator and the setting entities.
+# Replace the entity references and targets throughout this file. The custom
+# cards also expose entity, companion_entity and status_entities overrides;
+# status_entities is ordered slot 1, slot 2, slot 3, slot 4. Curves additionally
+# use fetch_entity, and program cards use editor_path.
+#
+# All fixed dashboard labels are English. Custom cards are pinned to English
+# here; remove language: en to follow the HA user language, or use language: uk.
+# The optional Battery lab view and its overview navigation badge may be removed
+# if you do not want physical-cell records or managed quality tests.
+#
+# The first view contains exactly four sections: one column per physical slot
+# on wide screens, naturally reflowing to fewer columns on smaller screens.
+# Start uses the program already configured on the charger. Applying a saved
+# profile never starts a slot. Start buttons are shown only for ready slots
+# while phone access is off; backend checks remain authoritative.
+title: SkyRC MC3000
+views:
+  - title: Slots
+    path: slots
+    icon: mdi:battery-charging
+    type: sections
+    max_columns: 4
+    header:
+      layout: responsive
+      card:
+        type: markdown
+        text_only: true
+        content: |-
+          # MC3000
+          Choose a saved program, apply its parameters, then start the slot.
+    badges:
+      - type: entity
+        entity: switch.skyrc_mc3000_companion_app_mode
+        name: Phone access
+        show_name: true
+        show_state: true
+        tap_action:
+          action: toggle
+      - type: shortcut
+        text: Programs
+        icon: mdi:playlist-edit
+        tap_action:
+          action: navigate
+          navigation_path: /dashboard-mc3000/programs
+      - type: shortcut
+        text: Settings
+        icon: mdi:cog
+        tap_action:
+          action: navigate
+          navigation_path: /dashboard-mc3000/settings
+      - type: shortcut
+        text: Battery lab
+        icon: mdi:battery-heart
+        tap_action:
+          action: navigate
+          navigation_path: /dashboard-mc3000/batteries
+    sections:
+      - type: grid
+        cards:
+          - type: heading
+            heading: Slot 1
+            heading_style: title
+            icon: mdi:battery
+            badges:
+              - type: entity
+                entity: sensor.skyrc_mc3000_slot_1_status
+                show_state: true
+          - type: tile
+            entity: sensor.skyrc_mc3000_slot_1_voltage
+            name: Voltage
+            tap_action:
+              action: more-info
+            grid_options:
+              columns: 6
+              rows: auto
+          - type: tile
+            entity: sensor.skyrc_mc3000_slot_1_current
+            name: Current
+            tap_action:
+              action: more-info
+            grid_options:
+              columns: 6
+              rows: auto
+          - type: tile
+            entity: sensor.skyrc_mc3000_slot_1_capacity
+            name: Capacity
+            tap_action:
+              action: more-info
+            grid_options:
+              columns: 6
+              rows: auto
+          - type: tile
+            entity: sensor.skyrc_mc3000_slot_1_temperature
+            name: Temperature
+            tap_action:
+              action: more-info
+            grid_options:
+              columns: 6
+              rows: auto
+          - type: custom:mc3000-programs-card
+            slot: 1
+            language: en
+            entity: sensor.skyrc_mc3000_programs
+            companion_entity: switch.skyrc_mc3000_companion_app_mode
+            status_entities:
+              - sensor.skyrc_mc3000_slot_1_status
+              - sensor.skyrc_mc3000_slot_2_status
+              - sensor.skyrc_mc3000_slot_3_status
+              - sensor.skyrc_mc3000_slot_4_status
+            editor_path: /dashboard-mc3000/programs
+            grid_options:
+              columns: full
+              rows: auto
+          - type: shortcut
+            label: Start
+            icon: mdi:play
+            tap_action:
+              action: perform-action
+              perform_action: button.press
+              target:
+                entity_id: button.skyrc_mc3000_slot_1_start
+              confirmation:
+                text: Start slot 1 with its current charger program? Check that the inserted cell matches
+                  the chemistry and limits you applied.
+            grid_options:
+              columns: 6
+              rows: 1
+            visibility:
+              - condition: state
+                entity: switch.skyrc_mc3000_companion_app_mode
+                state: 'off'
+              - condition: or
+                conditions:
+                  - condition: state
+                    entity: sensor.skyrc_mc3000_slot_1_status
+                    state: standby
+                  - condition: state
+                    entity: sensor.skyrc_mc3000_slot_1_status
+                    state: done
+          - type: shortcut
+            label: Stop
+            icon: mdi:stop
+            tap_action:
+              action: perform-action
+              perform_action: button.press
+              target:
+                entity_id: button.skyrc_mc3000_slot_1_stop
+            grid_options:
+              columns: 6
+              rows: 1
+            visibility:
+              - condition: state
+                entity: switch.skyrc_mc3000_companion_app_mode
+                state: 'off'
+          - type: shortcut
+            label: Voltage curve
+            icon: mdi:chart-line
+            tap_action:
+              action: navigate
+              navigation_path: /dashboard-mc3000/slot-1-curve
+            grid_options:
+              columns: full
+              rows: 1
+          - type: entities
+            title: Details
+            show_header_toggle: false
+            entities:
+              - entity: sensor.skyrc_mc3000_slot_1_battery_type
+                name: Chemistry
+              - entity: sensor.skyrc_mc3000_slot_1_mode
+                name: Mode
+              - entity: sensor.skyrc_mc3000_slot_1_elapsed_time
+                name: Elapsed time
+              - entity: sensor.skyrc_mc3000_slot_1_internal_resistance
+                name: Internal resistance
+              - entity: sensor.skyrc_mc3000_slot_1_power
+                name: Power
+              - entity: sensor.skyrc_mc3000_slot_1_completed_cycles
+                name: Completed cycles
+              - entity: sensor.skyrc_mc3000_slot_1_indicator
+                name: Slot indicator
+              - entity: select.skyrc_mc3000_slot_1_expected_chemistry
+                name: Expected chemistry
+            grid_options:
+              columns: full
+              rows: auto
+      - type: grid
+        cards:
+          - type: heading
+            heading: Slot 2
+            heading_style: title
+            icon: mdi:battery
+            badges:
+              - type: entity
+                entity: sensor.skyrc_mc3000_slot_2_status
+                show_state: true
+          - type: tile
+            entity: sensor.skyrc_mc3000_slot_2_voltage
+            name: Voltage
+            tap_action:
+              action: more-info
+            grid_options:
+              columns: 6
+              rows: auto
+          - type: tile
+            entity: sensor.skyrc_mc3000_slot_2_current
+            name: Current
+            tap_action:
+              action: more-info
+            grid_options:
+              columns: 6
+              rows: auto
+          - type: tile
+            entity: sensor.skyrc_mc3000_slot_2_capacity
+            name: Capacity
+            tap_action:
+              action: more-info
+            grid_options:
+              columns: 6
+              rows: auto
+          - type: tile
+            entity: sensor.skyrc_mc3000_slot_2_temperature
+            name: Temperature
+            tap_action:
+              action: more-info
+            grid_options:
+              columns: 6
+              rows: auto
+          - type: custom:mc3000-programs-card
+            slot: 2
+            language: en
+            entity: sensor.skyrc_mc3000_programs
+            companion_entity: switch.skyrc_mc3000_companion_app_mode
+            status_entities:
+              - sensor.skyrc_mc3000_slot_1_status
+              - sensor.skyrc_mc3000_slot_2_status
+              - sensor.skyrc_mc3000_slot_3_status
+              - sensor.skyrc_mc3000_slot_4_status
+            editor_path: /dashboard-mc3000/programs
+            grid_options:
+              columns: full
+              rows: auto
+          - type: shortcut
+            label: Start
+            icon: mdi:play
+            tap_action:
+              action: perform-action
+              perform_action: button.press
+              target:
+                entity_id: button.skyrc_mc3000_slot_2_start
+              confirmation:
+                text: Start slot 2 with its current charger program? Check that the inserted cell matches
+                  the chemistry and limits you applied.
+            grid_options:
+              columns: 6
+              rows: 1
+            visibility:
+              - condition: state
+                entity: switch.skyrc_mc3000_companion_app_mode
+                state: 'off'
+              - condition: or
+                conditions:
+                  - condition: state
+                    entity: sensor.skyrc_mc3000_slot_2_status
+                    state: standby
+                  - condition: state
+                    entity: sensor.skyrc_mc3000_slot_2_status
+                    state: done
+          - type: shortcut
+            label: Stop
+            icon: mdi:stop
+            tap_action:
+              action: perform-action
+              perform_action: button.press
+              target:
+                entity_id: button.skyrc_mc3000_slot_2_stop
+            grid_options:
+              columns: 6
+              rows: 1
+            visibility:
+              - condition: state
+                entity: switch.skyrc_mc3000_companion_app_mode
+                state: 'off'
+          - type: shortcut
+            label: Voltage curve
+            icon: mdi:chart-line
+            tap_action:
+              action: navigate
+              navigation_path: /dashboard-mc3000/slot-2-curve
+            grid_options:
+              columns: full
+              rows: 1
+          - type: entities
+            title: Details
+            show_header_toggle: false
+            entities:
+              - entity: sensor.skyrc_mc3000_slot_2_battery_type
+                name: Chemistry
+              - entity: sensor.skyrc_mc3000_slot_2_mode
+                name: Mode
+              - entity: sensor.skyrc_mc3000_slot_2_elapsed_time
+                name: Elapsed time
+              - entity: sensor.skyrc_mc3000_slot_2_internal_resistance
+                name: Internal resistance
+              - entity: sensor.skyrc_mc3000_slot_2_power
+                name: Power
+              - entity: sensor.skyrc_mc3000_slot_2_completed_cycles
+                name: Completed cycles
+              - entity: sensor.skyrc_mc3000_slot_2_indicator
+                name: Slot indicator
+              - entity: select.skyrc_mc3000_slot_2_expected_chemistry
+                name: Expected chemistry
+            grid_options:
+              columns: full
+              rows: auto
+      - type: grid
+        cards:
+          - type: heading
+            heading: Slot 3
+            heading_style: title
+            icon: mdi:battery
+            badges:
+              - type: entity
+                entity: sensor.skyrc_mc3000_slot_3_status
+                show_state: true
+          - type: tile
+            entity: sensor.skyrc_mc3000_slot_3_voltage
+            name: Voltage
+            tap_action:
+              action: more-info
+            grid_options:
+              columns: 6
+              rows: auto
+          - type: tile
+            entity: sensor.skyrc_mc3000_slot_3_current
+            name: Current
+            tap_action:
+              action: more-info
+            grid_options:
+              columns: 6
+              rows: auto
+          - type: tile
+            entity: sensor.skyrc_mc3000_slot_3_capacity
+            name: Capacity
+            tap_action:
+              action: more-info
+            grid_options:
+              columns: 6
+              rows: auto
+          - type: tile
+            entity: sensor.skyrc_mc3000_slot_3_temperature
+            name: Temperature
+            tap_action:
+              action: more-info
+            grid_options:
+              columns: 6
+              rows: auto
+          - type: custom:mc3000-programs-card
+            slot: 3
+            language: en
+            entity: sensor.skyrc_mc3000_programs
+            companion_entity: switch.skyrc_mc3000_companion_app_mode
+            status_entities:
+              - sensor.skyrc_mc3000_slot_1_status
+              - sensor.skyrc_mc3000_slot_2_status
+              - sensor.skyrc_mc3000_slot_3_status
+              - sensor.skyrc_mc3000_slot_4_status
+            editor_path: /dashboard-mc3000/programs
+            grid_options:
+              columns: full
+              rows: auto
+          - type: shortcut
+            label: Start
+            icon: mdi:play
+            tap_action:
+              action: perform-action
+              perform_action: button.press
+              target:
+                entity_id: button.skyrc_mc3000_slot_3_start
+              confirmation:
+                text: Start slot 3 with its current charger program? Check that the inserted cell matches
+                  the chemistry and limits you applied.
+            grid_options:
+              columns: 6
+              rows: 1
+            visibility:
+              - condition: state
+                entity: switch.skyrc_mc3000_companion_app_mode
+                state: 'off'
+              - condition: or
+                conditions:
+                  - condition: state
+                    entity: sensor.skyrc_mc3000_slot_3_status
+                    state: standby
+                  - condition: state
+                    entity: sensor.skyrc_mc3000_slot_3_status
+                    state: done
+          - type: shortcut
+            label: Stop
+            icon: mdi:stop
+            tap_action:
+              action: perform-action
+              perform_action: button.press
+              target:
+                entity_id: button.skyrc_mc3000_slot_3_stop
+            grid_options:
+              columns: 6
+              rows: 1
+            visibility:
+              - condition: state
+                entity: switch.skyrc_mc3000_companion_app_mode
+                state: 'off'
+          - type: shortcut
+            label: Voltage curve
+            icon: mdi:chart-line
+            tap_action:
+              action: navigate
+              navigation_path: /dashboard-mc3000/slot-3-curve
+            grid_options:
+              columns: full
+              rows: 1
+          - type: entities
+            title: Details
+            show_header_toggle: false
+            entities:
+              - entity: sensor.skyrc_mc3000_slot_3_battery_type
+                name: Chemistry
+              - entity: sensor.skyrc_mc3000_slot_3_mode
+                name: Mode
+              - entity: sensor.skyrc_mc3000_slot_3_elapsed_time
+                name: Elapsed time
+              - entity: sensor.skyrc_mc3000_slot_3_internal_resistance
+                name: Internal resistance
+              - entity: sensor.skyrc_mc3000_slot_3_power
+                name: Power
+              - entity: sensor.skyrc_mc3000_slot_3_completed_cycles
+                name: Completed cycles
+              - entity: sensor.skyrc_mc3000_slot_3_indicator
+                name: Slot indicator
+              - entity: select.skyrc_mc3000_slot_3_expected_chemistry
+                name: Expected chemistry
+            grid_options:
+              columns: full
+              rows: auto
+      - type: grid
+        cards:
+          - type: heading
+            heading: Slot 4
+            heading_style: title
+            icon: mdi:battery
+            badges:
+              - type: entity
+                entity: sensor.skyrc_mc3000_slot_4_status
+                show_state: true
+          - type: tile
+            entity: sensor.skyrc_mc3000_slot_4_voltage
+            name: Voltage
+            tap_action:
+              action: more-info
+            grid_options:
+              columns: 6
+              rows: auto
+          - type: tile
+            entity: sensor.skyrc_mc3000_slot_4_current
+            name: Current
+            tap_action:
+              action: more-info
+            grid_options:
+              columns: 6
+              rows: auto
+          - type: tile
+            entity: sensor.skyrc_mc3000_slot_4_capacity
+            name: Capacity
+            tap_action:
+              action: more-info
+            grid_options:
+              columns: 6
+              rows: auto
+          - type: tile
+            entity: sensor.skyrc_mc3000_slot_4_temperature
+            name: Temperature
+            tap_action:
+              action: more-info
+            grid_options:
+              columns: 6
+              rows: auto
+          - type: custom:mc3000-programs-card
+            slot: 4
+            language: en
+            entity: sensor.skyrc_mc3000_programs
+            companion_entity: switch.skyrc_mc3000_companion_app_mode
+            status_entities:
+              - sensor.skyrc_mc3000_slot_1_status
+              - sensor.skyrc_mc3000_slot_2_status
+              - sensor.skyrc_mc3000_slot_3_status
+              - sensor.skyrc_mc3000_slot_4_status
+            editor_path: /dashboard-mc3000/programs
+            grid_options:
+              columns: full
+              rows: auto
+          - type: shortcut
+            label: Start
+            icon: mdi:play
+            tap_action:
+              action: perform-action
+              perform_action: button.press
+              target:
+                entity_id: button.skyrc_mc3000_slot_4_start
+              confirmation:
+                text: Start slot 4 with its current charger program? Check that the inserted cell matches
+                  the chemistry and limits you applied.
+            grid_options:
+              columns: 6
+              rows: 1
+            visibility:
+              - condition: state
+                entity: switch.skyrc_mc3000_companion_app_mode
+                state: 'off'
+              - condition: or
+                conditions:
+                  - condition: state
+                    entity: sensor.skyrc_mc3000_slot_4_status
+                    state: standby
+                  - condition: state
+                    entity: sensor.skyrc_mc3000_slot_4_status
+                    state: done
+          - type: shortcut
+            label: Stop
+            icon: mdi:stop
+            tap_action:
+              action: perform-action
+              perform_action: button.press
+              target:
+                entity_id: button.skyrc_mc3000_slot_4_stop
+            grid_options:
+              columns: 6
+              rows: 1
+            visibility:
+              - condition: state
+                entity: switch.skyrc_mc3000_companion_app_mode
+                state: 'off'
+          - type: shortcut
+            label: Voltage curve
+            icon: mdi:chart-line
+            tap_action:
+              action: navigate
+              navigation_path: /dashboard-mc3000/slot-4-curve
+            grid_options:
+              columns: full
+              rows: 1
+          - type: entities
+            title: Details
+            show_header_toggle: false
+            entities:
+              - entity: sensor.skyrc_mc3000_slot_4_battery_type
+                name: Chemistry
+              - entity: sensor.skyrc_mc3000_slot_4_mode
+                name: Mode
+              - entity: sensor.skyrc_mc3000_slot_4_elapsed_time
+                name: Elapsed time
+              - entity: sensor.skyrc_mc3000_slot_4_internal_resistance
+                name: Internal resistance
+              - entity: sensor.skyrc_mc3000_slot_4_power
+                name: Power
+              - entity: sensor.skyrc_mc3000_slot_4_completed_cycles
+                name: Completed cycles
+              - entity: sensor.skyrc_mc3000_slot_4_indicator
+                name: Slot indicator
+              - entity: select.skyrc_mc3000_slot_4_expected_chemistry
+                name: Expected chemistry
+            grid_options:
+              columns: full
+              rows: auto
+  - title: Programs
+    path: programs
+    icon: mdi:playlist-edit
+    type: sections
+    max_columns: 2
+    sections:
+      - type: grid
+        cards:
+          - type: heading
+            heading: Program library
+            heading_style: title
+            icon: mdi:playlist-edit
+          - type: shortcut
+            label: Back to slots
+            icon: mdi:arrow-left
+            tap_action:
+              action: navigate
+              navigation_path: /dashboard-mc3000/slots
+            grid_options:
+              columns: full
+              rows: 1
+          - type: custom:mc3000-programs-card
+            mode: editor
+            language: en
+            entity: sensor.skyrc_mc3000_programs
+            companion_entity: switch.skyrc_mc3000_companion_app_mode
+            status_entities:
+              - sensor.skyrc_mc3000_slot_1_status
+              - sensor.skyrc_mc3000_slot_2_status
+              - sensor.skyrc_mc3000_slot_3_status
+              - sensor.skyrc_mc3000_slot_4_status
+            editor_path: /dashboard-mc3000/programs
+            grid_options:
+              columns: full
+              rows: auto
+        column_span: 2
+  - title: Settings
+    path: settings
+    icon: mdi:cog
+    type: sections
+    max_columns: 2
+    sections:
+      - type: grid
+        cards:
+          - type: heading
+            heading: Connection and access
+            heading_style: title
+            icon: mdi:bluetooth-connect
+          - type: shortcut
+            label: Back to slots
+            icon: mdi:arrow-left
+            tap_action:
+              action: navigate
+              navigation_path: /dashboard-mc3000/slots
+            grid_options:
+              columns: full
+              rows: 1
+          - type: tile
+            entity: sensor.skyrc_mc3000_connection
+            name: Connection
+            tap_action:
+              action: more-info
+            grid_options:
+              columns: full
+              rows: auto
+          - type: tile
+            entity: switch.skyrc_mc3000_companion_app_mode
+            name: Phone access
+            tap_action:
+              action: more-info
+            grid_options:
+              columns: full
+              rows: auto
+            icon: mdi:cellphone-wireless
+            features:
+              - type: toggle
+          - type: markdown
+            content: Enable **Phone access** to release the Bluetooth connection for the SkyRC app. Disable
+              it to return control to Home Assistant.
+            grid_options:
+              columns: full
+              rows: auto
+          - type: tile
+            entity: switch.skyrc_mc3000_auto_fetch_voltage_curves
+            name: Read curves automatically
+            tap_action:
+              action: more-info
+            grid_options:
+              columns: full
+              rows: auto
+            icon: mdi:chart-line
+            features:
+              - type: toggle
+          - type: shortcut
+            label: Refresh charger
+            icon: mdi:refresh
+            tap_action:
+              action: perform-action
+              perform_action: button.press
+              target:
+                entity_id: button.skyrc_mc3000_refresh
+            grid_options:
+              columns: 6
+              rows: 1
+            visibility:
+              - condition: state
+                entity: switch.skyrc_mc3000_companion_app_mode
+                state: 'off'
+          - type: shortcut
+            label: Stop all slots
+            icon: mdi:stop-circle-outline
+            tap_action:
+              action: perform-action
+              perform_action: button.press
+              target:
+                entity_id: button.skyrc_mc3000_stop_all
+            grid_options:
+              columns: 6
+              rows: 1
+            visibility:
+              - condition: state
+                entity: switch.skyrc_mc3000_companion_app_mode
+                state: 'off'
+      - type: grid
+        cards:
+          - type: heading
+            heading: Charger settings
+            heading_style: title
+            icon: mdi:tune
+          - type: markdown
+            content: Stop all slots before changing device settings. The integration reads the settings
+              back after each change.
+            grid_options:
+              columns: full
+              rows: auto
+          - type: entities
+            show_header_toggle: false
+            entities:
+              - entity: select.skyrc_mc3000_setting_temp_unit
+                name: Temperature unit
+              - entity: select.skyrc_mc3000_setting_display
+                name: Display backlight
+              - entity: select.skyrc_mc3000_setting_cooling_fan
+                name: Cooling fan
+              - entity: switch.skyrc_mc3000_setting_system_beep
+                name: System beep
+              - entity: switch.skyrc_mc3000_setting_screensaver
+                name: Screensaver
+              - entity: number.skyrc_mc3000_setting_input_voltage_cutoff
+                name: Input voltage cutoff
+            grid_options:
+              columns: full
+              rows: auto
+  - title: Battery lab
+    path: batteries
+    icon: mdi:battery-heart
+    type: sections
+    max_columns: 4
+    sections:
+      - type: grid
+        cards:
+          - type: heading
+            heading: Optional battery records and tests
+            heading_style: title
+            icon: mdi:battery-heart
+          - type: shortcut
+            label: Back to slots
+            icon: mdi:arrow-left
+            tap_action:
+              action: navigate
+              navigation_path: /dashboard-mc3000/slots
+            grid_options:
+              columns: full
+              rows: 1
+          - type: markdown
+            content: Label each physical cell and assign it to a slot before recording a test. Capacity
+              and long observation workflows are experimental; incomplete measurements remain marked as
+              incomplete.
+            grid_options:
+              columns: full
+              rows: auto
+          - type: custom:mc3000-batteries-card
+            language: en
+            entity: sensor.skyrc_mc3000_batteries
+            companion_entity: switch.skyrc_mc3000_companion_app_mode
+            status_entities:
+              - sensor.skyrc_mc3000_slot_1_status
+              - sensor.skyrc_mc3000_slot_2_status
+              - sensor.skyrc_mc3000_slot_3_status
+              - sensor.skyrc_mc3000_slot_4_status
+            grid_options:
+              columns: full
+              rows: auto
+        column_span: 4
+  - title: Slot 1 curve
+    path: slot-1-curve
+    icon: mdi:chart-line
+    type: sections
+    max_columns: 2
+    subview: true
+    back_path: /dashboard-mc3000/slots
+    sections:
+      - type: grid
+        cards:
+          - type: heading
+            heading: Slot 1 · voltage curve
+            heading_style: title
+            icon: mdi:chart-line
+          - type: custom:mc3000-curve-card
+            slot: 1
+            language: en
+            entity: sensor.skyrc_mc3000_slot_1_voltage_curve_points
+            fetch_entity: button.skyrc_mc3000_slot_1_fetch_voltage_curve
+            companion_entity: switch.skyrc_mc3000_companion_app_mode
+            grid_options:
+              columns: full
+              rows: auto
+          - type: entities
+            title: Curve metadata
+            show_header_toggle: false
+            entities:
+              - entity: sensor.skyrc_mc3000_slot_1_voltage_curve_points
+                name: Non-zero samples
+              - type: attribute
+                entity: sensor.skyrc_mc3000_slot_1_voltage_curve_points
+                attribute: interval_seconds
+                name: Sample interval (seconds)
+              - type: attribute
+                entity: sensor.skyrc_mc3000_slot_1_voltage_curve_points
+                attribute: last_fetched
+                name: Last read
+            grid_options:
+              columns: full
+              rows: auto
+        column_span: 2
+  - title: Slot 2 curve
+    path: slot-2-curve
+    icon: mdi:chart-line
+    type: sections
+    max_columns: 2
+    subview: true
+    back_path: /dashboard-mc3000/slots
+    sections:
+      - type: grid
+        cards:
+          - type: heading
+            heading: Slot 2 · voltage curve
+            heading_style: title
+            icon: mdi:chart-line
+          - type: custom:mc3000-curve-card
+            slot: 2
+            language: en
+            entity: sensor.skyrc_mc3000_slot_2_voltage_curve_points
+            fetch_entity: button.skyrc_mc3000_slot_2_fetch_voltage_curve
+            companion_entity: switch.skyrc_mc3000_companion_app_mode
+            grid_options:
+              columns: full
+              rows: auto
+          - type: entities
+            title: Curve metadata
+            show_header_toggle: false
+            entities:
+              - entity: sensor.skyrc_mc3000_slot_2_voltage_curve_points
+                name: Non-zero samples
+              - type: attribute
+                entity: sensor.skyrc_mc3000_slot_2_voltage_curve_points
+                attribute: interval_seconds
+                name: Sample interval (seconds)
+              - type: attribute
+                entity: sensor.skyrc_mc3000_slot_2_voltage_curve_points
+                attribute: last_fetched
+                name: Last read
+            grid_options:
+              columns: full
+              rows: auto
+        column_span: 2
+  - title: Slot 3 curve
+    path: slot-3-curve
+    icon: mdi:chart-line
+    type: sections
+    max_columns: 2
+    subview: true
+    back_path: /dashboard-mc3000/slots
+    sections:
+      - type: grid
+        cards:
+          - type: heading
+            heading: Slot 3 · voltage curve
+            heading_style: title
+            icon: mdi:chart-line
+          - type: custom:mc3000-curve-card
+            slot: 3
+            language: en
+            entity: sensor.skyrc_mc3000_slot_3_voltage_curve_points
+            fetch_entity: button.skyrc_mc3000_slot_3_fetch_voltage_curve
+            companion_entity: switch.skyrc_mc3000_companion_app_mode
+            grid_options:
+              columns: full
+              rows: auto
+          - type: entities
+            title: Curve metadata
+            show_header_toggle: false
+            entities:
+              - entity: sensor.skyrc_mc3000_slot_3_voltage_curve_points
+                name: Non-zero samples
+              - type: attribute
+                entity: sensor.skyrc_mc3000_slot_3_voltage_curve_points
+                attribute: interval_seconds
+                name: Sample interval (seconds)
+              - type: attribute
+                entity: sensor.skyrc_mc3000_slot_3_voltage_curve_points
+                attribute: last_fetched
+                name: Last read
+            grid_options:
+              columns: full
+              rows: auto
+        column_span: 2
+  - title: Slot 4 curve
+    path: slot-4-curve
+    icon: mdi:chart-line
+    type: sections
+    max_columns: 2
+    subview: true
+    back_path: /dashboard-mc3000/slots
+    sections:
+      - type: grid
+        cards:
+          - type: heading
+            heading: Slot 4 · voltage curve
+            heading_style: title
+            icon: mdi:chart-line
+          - type: custom:mc3000-curve-card
+            slot: 4
+            language: en
+            entity: sensor.skyrc_mc3000_slot_4_voltage_curve_points
+            fetch_entity: button.skyrc_mc3000_slot_4_fetch_voltage_curve
+            companion_entity: switch.skyrc_mc3000_companion_app_mode
+            grid_options:
+              columns: full
+              rows: auto
+          - type: entities
+            title: Curve metadata
+            show_header_toggle: false
+            entities:
+              - entity: sensor.skyrc_mc3000_slot_4_voltage_curve_points
+                name: Non-zero samples
+              - type: attribute
+                entity: sensor.skyrc_mc3000_slot_4_voltage_curve_points
+                attribute: interval_seconds
+                name: Sample interval (seconds)
+              - type: attribute
+                entity: sensor.skyrc_mc3000_slot_4_voltage_curve_points
+                attribute: last_fetched
+                name: Last read
+            grid_options:
+              columns: full
+              rows: auto
+        column_span: 2
